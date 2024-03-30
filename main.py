@@ -1,7 +1,8 @@
 import telebot
 from telebot import types
+import database_manager
 
-API_TOKEN = 'Token'
+API_TOKEN = 'TOKEN'
 bot = telebot.TeleBot(API_TOKEN)
 
 USER_STATE = {}  # Словарь для хранения состояний пользователей
@@ -11,8 +12,10 @@ USER_DATA = {}  # Словарь для хранения данных польз
 STATE_REGISTER = 1
 STATE_ENTER_NAME = 2
 STATE_ENTER_CITY = 3
-STATE_ENTER_AGE = 4
-STATE_UPLOAD_PHOTO = 5
+STATE_DESCRIPTIONS = 4
+STATE_ENTER_AGE = 5
+STATE_CHOOSE_STATUS = 6
+STATE_UPLOAD_PHOTO = 7
 
 
 # Функция для обновления состояния пользователя
@@ -61,7 +64,7 @@ def handle_registration(call):
 
 # Обработчик текстовых сообщений для регистрации
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_NAME)
-def ask_city(message):
+def ask_name(message):
     user_data = get_user_data(message.from_user.id)
     user_data['name'] = message.text
     set_state(message.from_user.id, STATE_ENTER_CITY)
@@ -69,37 +72,96 @@ def ask_city(message):
 
 
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_CITY)
-def ask_age(message):
+def ask_city(message):
     user_data = get_user_data(message.from_user.id)
     user_data['city'] = message.text
+    set_state(message.from_user.id, STATE_DESCRIPTIONS)
+    bot.send_message(message.chat.id, "Расскажи немного о себе")
+
+
+@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS)
+def ask_descriptions(message):
+    user_data = get_user_data(message.from_user.id)
+    user_data['descriptions'] = message.text
     set_state(message.from_user.id, STATE_ENTER_AGE)
-    bot.send_message(message.chat.id, "Почти закончили. Сколько тебе лет?")
+    bot.send_message(message.chat.id, "Ок, круто! Сколько тебе лет?")
+
 
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_AGE)
-def ask_photo(message):
+def ask_age(message):
     user_data = get_user_data(message.from_user.id)
     try:
-        user_data['age'] = int(message.text)  # Проверка, что возраст — это число
-        set_state(message.from_user.id, STATE_UPLOAD_PHOTO)  # Переход к состоянию загрузки фото
-        bot.send_message(message.chat.id, "Теперь загрузите ваше фото.")
+        user_data['age'] = int(message.text)
+        set_state(message.from_user.id, STATE_CHOOSE_STATUS)
+
+        # Сразу отправляем inline-клавиатуру для выбора статуса
+        markup_status = types.InlineKeyboardMarkup()
+        buttons = [
+            types.InlineKeyboardButton("Найти друзей", callback_data="status_find_friends"),
+            types.InlineKeyboardButton("Найти вторую половинку", callback_data='status_find_love'),
+            types.InlineKeyboardButton("Просто пообщаться", callback_data='status_just_chat')
+        ]
+        for button in buttons:
+            markup_status.add(button)
+        bot.send_message(message.chat.id, "Какую цель общения вы ищете?", reply_markup=markup_status)
     except ValueError:
         bot.send_message(message.chat.id, "Пожалуйста, введите ваш возраст цифрами.")
 
-# Отдельный обработчик для получения фото
-@bot.message_handler(content_types=['photo'], func=lambda message: get_state(message.from_user.id) == STATE_UPLOAD_PHOTO)
-def handle_photo_upload(message):
-    user_data = get_user_data(message.from_user.id)
-    photo_id = message.photo[-1].file_id  # Получаем file_id самой большой версии фото
-    user_data['photo'] = photo_id  # Сохраняем file_id фото в данных пользователя
 
-    # Завершаем регистрацию и выводим все собранные данные
-    set_state(message.from_user.id, None)  # Сбрасываем состояние пользователя
-    # Используем метод send_photo для отправки фото с подписью
+def get_status_text(callback_data):
+    statuses = {
+        "status_find_friends": "Найти друзей",
+        "status_find_love": "Найти вторую половинку",
+        "status_just_chat": "Просто пообщаться",
+    }
+    # Получаем ключ статуса (например, 'find_friends') и возвращаем соответствующий текст
+    return statuses.get(callback_data, "Неизвестный статус")
+
+
+# Обработка выбора статуса
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    if get_state(call.from_user.id) == STATE_CHOOSE_STATUS:
+        user_data = get_user_data(call.from_user.id)
+
+        user_data['status'] = get_status_text(call.data)
+        set_state(call.from_user.id, STATE_UPLOAD_PHOTO)
+        bot.send_message(call.message.chat.id, "Теперь загрузите ваше фото.")
+
+
+@bot.message_handler(content_types=['photo'],
+                     func=lambda message: get_state(message.from_user.id) == STATE_UPLOAD_PHOTO)
+def handle_photo_and_final_register(message):
+    user_data = USER_DATA.get(message.from_user.id, {})
+    photo_id = message.photo[-1].file_id  # Получаем file_id самой большой версии фото
+    user_data['photo'] = photo_id
+
+    # Сохраняем все собранные данные в базу данных
+    database_manager.add_user(
+        name=user_data.get('name'),
+        city=user_data.get('city'),
+        age=user_data.get('age'),
+        descriptions=user_data.get('descriptions'),
+        photo=photo_id,
+        status=user_data.get('status')
+    )
+
+    # Сбрасываем состояние пользователя и отправляем подтверждение об успешной регистрации
+    set_state(message.from_user.id, None)
+    bot.send_message(message.chat.id, "Ваша регистрация успешно завершена!")
+
     bot.send_photo(
         message.chat.id,
         photo_id,
-        caption=f"Ваша анкета:\nИмя: {user_data['name']}\nГород: {user_data['city']}\nВозраст: {user_data['age']}"
+        caption=f"Ваша анкета:\nИмя: {user_data['name']}\nГород: {user_data['city']}\nОписание: {user_data['descriptions']}\nЦель общения: {user_data['status']} \nВозраст: {user_data['age']}"
+
     )
 
+    # Очистка временных данных пользователя
+    if message.from_user.id in USER_DATA:
+        del USER_DATA[message.from_user.id]
 
-bot.polling(none_stop=True)
+
+if __name__ == '__main__':
+    database_manager.create_table()
+    bot.polling(none_stop=True)
