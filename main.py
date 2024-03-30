@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import database_manager
 
-API_TOKEN = 'TOKEN'
+API_TOKEN = '7104369196:AAGZ4NF4cg5bRFdYTnry6chtP8tBoF8j2eA'
 bot = telebot.TeleBot(API_TOKEN)
 
 USER_STATE = {}  # Словарь для хранения состояний пользователей
@@ -16,6 +16,8 @@ STATE_DESCRIPTIONS = 4
 STATE_ENTER_AGE = 5
 STATE_CHOOSE_STATUS = 6
 STATE_UPLOAD_PHOTO = 7
+# STATE_PROFILE_PREVIEW = 8
+STATE_MAIN_SCREEN = 8
 
 
 # Функция для обновления состояния пользователя
@@ -126,7 +128,10 @@ def handle_query(call):
 
         user_data['status'] = get_status_text(call.data)
         set_state(call.from_user.id, STATE_UPLOAD_PHOTO)
+        bot.answer_callback_query(call.id) # Подтверждение получения callback_query (запрос обработан)
         bot.send_message(call.message.chat.id, "Теперь загрузите ваше фото.")
+    elif call.data == 'go_to_main_menu':  # Условие для обработки кнопки "ОК"
+        main_screen(call)
 
 
 @bot.message_handler(content_types=['photo'],
@@ -148,18 +153,43 @@ def handle_photo_and_final_register(message):
 
     # Сбрасываем состояние пользователя и отправляем подтверждение об успешной регистрации
     set_state(message.from_user.id, None)
-    bot.send_message(message.chat.id, "Ваша регистрация успешно завершена!")
+
+    markup = types.InlineKeyboardMarkup()
+    button_ok = types.InlineKeyboardButton("Ок", callback_data="go_to_main_menu")
+    markup.add(button_ok)
 
     bot.send_photo(
         message.chat.id,
         photo_id,
-        caption=f"Ваша анкета:\nИмя: {user_data['name']}\nГород: {user_data['city']}\nОписание: {user_data['descriptions']}\nЦель общения: {user_data['status']} \nВозраст: {user_data['age']}"
+        caption=f"Ваша анкета:\nИмя: {user_data['name']}\nГород: {user_data['city']}"
+                f"\nОписание: {user_data['descriptions']}\nЦель общения: {user_data['status']} "
+                f"\nВозраст: {user_data['age']}"
 
     )
+
+    bot.send_message(message.chat.id, "Ваша регистрация успешно завершена!", reply_markup=markup)
 
     # Очистка временных данных пользователя
     if message.from_user.id in USER_DATA:
         del USER_DATA[message.from_user.id]
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'go_to_main_menu')
+def main_screen(call):
+    set_state(call.from_user.id, STATE_MAIN_SCREEN)
+    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
+    bot.send_photo(call.message.chat.id, img_url)
+
+    markup_main_buttons = types.InlineKeyboardMarkup()
+    markup_main_buttons.row(types.InlineKeyboardButton("Начать поиск", callback_data="start_searching"))
+    # С помощью метода .row() можно сделать одну большую кнопку
+
+    markup_main_buttons.add(types.InlineKeyboardButton("Мой профиль", callback_data='my_profile'),
+                            types.InlineKeyboardButton("О Проекте", callback_data='about_project'))
+    # Метод .add() добавляет каждую кнопку в новый ряд, что позволяет сделать в одном ряду две маленькие кнопки
+
+    bot.send_message(call.message.chat.id, "Добро пожаловать на главный экран, тут вы сможете начать поиск "
+                                           "спутников, узнать о проекте и настроить свой профиль", reply_markup=markup_main_buttons)
 
 
 if __name__ == '__main__':
