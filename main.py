@@ -1,8 +1,12 @@
 import telebot
 from telebot import types
 import database_manager
+from dotenv import load_dotenv
+import os
 
-API_TOKEN = 'TOKEN'
+load_dotenv()
+
+API_TOKEN = os.getenv("API_TOKEN")
 bot = telebot.TeleBot(API_TOKEN)
 
 USER_STATE = {}  # Словарь для хранения состояний пользователей
@@ -208,4 +212,5 @@ def handle_about_project(call):
 
 if __name__ == '__main__':
     database_manager.create_table()
+    print("Бот запущен")
     bot.polling(none_stop=True)
