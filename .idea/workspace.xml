@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="9db14eee-9ca6-43c6-8daf-17b5922ce172" name="Changes" comment="Like Me - patch notes 0.0.1&#10;&#10;Привет! Это первая версия чат бота Like Me для Telegram. Разрабатываемого в рамках учебного проекта. В рамках которой был реализован базовый функционал, а именно:&#10;&#10;- Приветственное сообщение, которое встречает каждого, кто запустит бота с кнопкой &quot;Регистрация&quot;&#10;- Процесс регистрации нового пользователя.&#10;&#10;В данной версии присутствуют заглушки для реализации будущего функционала.">
-      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/database_manager.py" afterDir="false" />
+    <list default="true" id="9db14eee-9ca6-43c6-8daf-17b5922ce172" name="Changes" comment="Like Me - patch notes 0.2.0&#10;&#10;В рамках этой версии изучал работу с БД и реализовал процесс регистрации анкеты с сохранением данных в БД:&#10;&#10;What's new?&#10;Создал базу данных используя SQLite. Был реализован начальный функционал:&#10;- Создание БД.&#10;- Добавление нового пользователя.&#10;- Получение информации о пользователе через id.&#10;- Обновление данных пользователя.&#10;&#10;Обновил процесс регистрации.&#10;- Появилась возможность рассказать немного о себе и добавить эту информацию в свой профиль в разделе &quot;Расскажи немного о себе&quot;&#10;- Во время регистрации появилась возможность выбрать 1 из 3 целей для общения: Найти друзей, Найти вторую половинку, Просто пообщаться. &#10;- Добавил функцию очистки временных данных после завершения регистрации &#10;&#10;Это не финальная версия учебного проекта. С выходом новых обновлений бот Like Me будет получать новый функционал.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users_database.db" beforeDir="false" afterPath="$PROJECT_DIR$/users_database.db" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -25,7 +24,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="LM-2" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -45,7 +44,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "LM-2",
+    "git-widget-placeholder": "LM-3",
     "ignore.virus.scanning.warn.message": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
@@ -97,7 +96,7 @@
       <updated>1710686583226</updated>
       <workItem from="1710686587310" duration="5153000" />
       <workItem from="1711037712318" duration="12758000" />
-      <workItem from="1711700845938" duration="20154000" />
+      <workItem from="1711700845938" duration="30951000" />
     </task>
     <task id="LOCAL-00001" summary="Like Me - patch notes 0.0.1&#10;&#10;Привет! Это первая версия чат бота Like Me для Telegram. Разрабатываемого в рамках учебного проекта. В рамках которой был реализован базовый функционал, а именно:&#10;&#10;- Приветственное сообщение, которое встречает каждого, кто запустит бота с кнопкой &quot;Регистрация&quot;&#10;- Процесс регистрации нового пользователя.&#10;&#10;В данной версии присутствуют заглушки для реализации будущего функционала.">
       <option name="closed" value="true" />
@@ -107,7 +106,15 @@
       <option name="project" value="LOCAL" />
       <updated>1711050430717</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Like Me - patch notes 0.2.0&#10;&#10;В рамках этой версии изучал работу с БД и реализовал процесс регистрации анкеты с сохранением данных в БД:&#10;&#10;What's new?&#10;Создал базу данных используя SQLite. Был реализован начальный функционал:&#10;- Создание БД.&#10;- Добавление нового пользователя.&#10;- Получение информации о пользователе через id.&#10;- Обновление данных пользователя.&#10;&#10;Обновил процесс регистрации.&#10;- Появилась возможность рассказать немного о себе и добавить эту информацию в свой профиль в разделе &quot;Расскажи немного о себе&quot;&#10;- Во время регистрации появилась возможность выбрать 1 из 3 целей для общения: Найти друзей, Найти вторую половинку, Просто пообщаться. &#10;- Добавил функцию очистки временных данных после завершения регистрации &#10;&#10;Это не финальная версия учебного проекта. С выходом новых обновлений бот Like Me будет получать новый функционал.">
+      <option name="closed" value="true" />
+      <created>1711727966418</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1711727966418</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -115,9 +122,10 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Like Me - patch notes 0.0.1&#10;&#10;Привет! Это первая версия чат бота Like Me для Telegram. Разрабатываемого в рамках учебного проекта. В рамках которой был реализован базовый функционал, а именно:&#10;&#10;- Приветственное сообщение, которое встречает каждого, кто запустит бота с кнопкой &quot;Регистрация&quot;&#10;- Процесс регистрации нового пользователя.&#10;&#10;В данной версии присутствуют заглушки для реализации будущего функционала." />
-    <option name="LAST_COMMIT_MESSAGE" value="Like Me - patch notes 0.0.1&#10;&#10;Привет! Это первая версия чат бота Like Me для Telegram. Разрабатываемого в рамках учебного проекта. В рамках которой был реализован базовый функционал, а именно:&#10;&#10;- Приветственное сообщение, которое встречает каждого, кто запустит бота с кнопкой &quot;Регистрация&quot;&#10;- Процесс регистрации нового пользователя.&#10;&#10;В данной версии присутствуют заглушки для реализации будущего функционала." />
+    <MESSAGE value="Like Me - patch notes 0.2.0&#10;&#10;В рамках этой версии изучал работу с БД и реализовал процесс регистрации анкеты с сохранением данных в БД:&#10;&#10;What's new?&#10;Создал базу данных используя SQLite. Был реализован начальный функционал:&#10;- Создание БД.&#10;- Добавление нового пользователя.&#10;- Получение информации о пользователе через id.&#10;- Обновление данных пользователя.&#10;&#10;Обновил процесс регистрации.&#10;- Появилась возможность рассказать немного о себе и добавить эту информацию в свой профиль в разделе &quot;Расскажи немного о себе&quot;&#10;- Во время регистрации появилась возможность выбрать 1 из 3 целей для общения: Найти друзей, Найти вторую половинку, Просто пообщаться. &#10;- Добавил функцию очистки временных данных после завершения регистрации &#10;&#10;Это не финальная версия учебного проекта. С выходом новых обновлений бот Like Me будет получать новый функционал." />
+    <option name="LAST_COMMIT_MESSAGE" value="Like Me - patch notes 0.2.0&#10;&#10;В рамках этой версии изучал работу с БД и реализовал процесс регистрации анкеты с сохранением данных в БД:&#10;&#10;What's new?&#10;Создал базу данных используя SQLite. Был реализован начальный функционал:&#10;- Создание БД.&#10;- Добавление нового пользователя.&#10;- Получение информации о пользователе через id.&#10;- Обновление данных пользователя.&#10;&#10;Обновил процесс регистрации.&#10;- Появилась возможность рассказать немного о себе и добавить эту информацию в свой профиль в разделе &quot;Расскажи немного о себе&quot;&#10;- Во время регистрации появилась возможность выбрать 1 из 3 целей для общения: Найти друзей, Найти вторую половинку, Просто пообщаться. &#10;- Добавил функцию очистки временных данных после завершения регистрации &#10;&#10;Это не финальная версия учебного проекта. С выходом новых обновлений бот Like Me будет получать новый функционал." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/ProjectLikeMe$main.coverage" NAME="main Coverage Results" MODIFIED="1711726318597" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/ProjectLikeMe$main.coverage" NAME="main Coverage Results" MODIFIED="1711805146109" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
