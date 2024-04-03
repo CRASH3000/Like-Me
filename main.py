@@ -2,7 +2,7 @@ import telebot
 from telebot import types
 import database_manager
 
-API_TOKEN = '7104369196:AAGZ4NF4cg5bRFdYTnry6chtP8tBoF8j2eA'
+API_TOKEN = 'TOKEN'
 bot = telebot.TeleBot(API_TOKEN)
 
 USER_STATE = {}  # Словарь для хранения состояний пользователей
@@ -18,6 +18,7 @@ STATE_CHOOSE_STATUS = 6
 STATE_UPLOAD_PHOTO = 7
 # STATE_PROFILE_PREVIEW = 8
 STATE_MAIN_SCREEN = 8
+STATE_ABOUT_PROJECT = 9
 
 
 # Функция для обновления состояния пользователя
@@ -128,7 +129,7 @@ def handle_query(call):
 
         user_data['status'] = get_status_text(call.data)
         set_state(call.from_user.id, STATE_UPLOAD_PHOTO)
-        bot.answer_callback_query(call.id) # Подтверждение получения callback_query (запрос обработан)
+        bot.answer_callback_query(call.id)  # Подтверждение получения callback_query (запрос обработан)
         bot.send_message(call.message.chat.id, "Теперь загрузите ваше фото.")
     elif call.data == 'go_to_main_menu':  # Условие для обработки кнопки "ОК"
         main_screen(call)
@@ -189,7 +190,20 @@ def main_screen(call):
     # Метод .add() добавляет каждую кнопку в новый ряд, что позволяет сделать в одном ряду две маленькие кнопки
 
     bot.send_message(call.message.chat.id, "Добро пожаловать на главный экран, тут вы сможете начать поиск "
-                                           "спутников, узнать о проекте и настроить свой профиль", reply_markup=markup_main_buttons)
+                                           "спутников, узнать о проекте и настроить свой профиль",
+                     reply_markup=markup_main_buttons)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == 'about_project')
+def handle_about_project(call):
+    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
+    bot.send_photo(call.message.chat.id, img_url, caption="Здесь описание проекта.")
+
+    markup = types.InlineKeyboardMarkup()
+    back_button = types.InlineKeyboardButton("Назад", callback_data='go_to_main_menu')
+    markup.add(back_button)
+
+    bot.send_message(call.message.chat.id, "Подробнее о проекте...", reply_markup=markup)
 
 
 if __name__ == '__main__':
