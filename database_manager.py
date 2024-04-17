@@ -18,7 +18,10 @@ def create_table():
             age INTEGER,
             descriptions TEXT,
             status TEXT,
-            photo TEXT
+            photo TEXT,
+            gender TEXT,
+            state INTEGER,
+            telegram_username TEXT
         )
     ''')
     conn.commit()
@@ -26,16 +29,21 @@ def create_table():
 
 
 # Добавление нового пользователя в базу данных
-def add_user(name, city, age, descriptions, status, photo):
+def add_user(user_id, name=None, city=None, age=None, descriptions=None, status=None, photo=None, gender=None, telegram_username=None, state=None):
     conn = get_connection()
     cursor = conn.cursor()
-    # Вставляем данные пользователя в таблицу
-    cursor.execute('''
-        INSERT INTO users (name, city, age, descriptions, status, photo)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (name, city, age, descriptions, status, photo))
-    conn.commit()
-    conn.close()
+    try:
+        cursor.execute('''
+            INSERT INTO users (id, name, city, age, descriptions, status, photo, gender, telegram_username, state)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (user_id, name, city, age, descriptions, status, photo, gender, telegram_username, state))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        print(f"User with id {user_id} already exists.")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
 
 
 # Получение данных пользователя по ID
@@ -49,21 +57,43 @@ def get_user(user_id):
 
 
 # Обновление данных пользователя
-def update_user(user_id, name=None, city=None, age=None, descriptions=None, status=None, photo=None):
+def update_user(user_id, **kwargs):
     conn = get_connection()
     cursor = conn.cursor()
-    # Обновляем данные пользователя в таблице
-    if name is not None:
-        cursor.execute('UPDATE users SET name=? WHERE id=?', (name, user_id))
-    if city is not None:
-        cursor.execute('UPDATE users SET city=? WHERE id=?', (city, user_id))
-    if age is not None:
-        cursor.execute('UPDATE users SET age=? WHERE id=?', (age, user_id))
-    if descriptions is not None:
-        cursor.execute('UPDATE users SET descriptions=? WHERE id=?', (descriptions, user_id))
-    if status is not None:
-        cursor.execute('UPDATE users SET status=? WHERE id=?', (status, user_id))
-    if photo is not None:
-        cursor.execute('UPDATE users SET photo=? WHERE id=?', (photo, user_id))
+    try:
+        for key, value in kwargs.items():
+            cursor.execute(f'UPDATE users SET {key}=? WHERE id=?', (value, user_id))
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+
+# Получение состояния пользователя
+def get_user_state(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT state FROM users WHERE id=?', (user_id,))
+    state = cursor.fetchone()
+    conn.close()
+    return state[0] if state else None
+
+
+# Получение имени пользователя Telegram
+def get_telegram_username(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT telegram_username FROM users WHERE id=?', (user_id,))
+    username = cursor.fetchone()
+    conn.close()
+    return username[0] if username else None
+
+
+# Удаление пользователя из базы данных
+def delete_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM users WHERE id=?', (user_id,))
     conn.commit()
     conn.close()
