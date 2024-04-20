@@ -84,6 +84,9 @@ def age_input(message):
 @bot.callback_query_handler(func=lambda call: call.data == "consent_yes")
 def consent_yes(call):
     user_id = call.from_user.id
+    telegram_username = call.from_user.username
+    database_manager.update_user(user_id, telegram_username=telegram_username)
+
     set_state(user_id, STATE_ENTER_NAME)
     bot.send_message(call.message.chat.id,
                      "Хорошо, с формальностями закончили, давай продолжим создавать твой профиль. Как тебя зовут?.")
