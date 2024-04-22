@@ -24,12 +24,23 @@ def create_table():
             telegram_username TEXT
         )
     ''')
+    # таблица для хранения лайков и дизлайков
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS likes (
+                user_id INTEGER,
+                liked_user_id INTEGER,
+                PRIMARY KEY (user_id, liked_user_id),
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                FOREIGN KEY (liked_user_id) REFERENCES users (id)
+            )
+        ''')
     conn.commit()
     conn.close()
 
 
 # Добавление нового пользователя в базу данных
-def add_user(user_id, name=None, city=None, age=None, descriptions=None, status=None, photo=None, gender=None, telegram_username=None, state=None):
+def add_user(user_id, name=None, city=None, age=None, descriptions=None, status=None, photo=None, gender=None,
+             telegram_username=None, state=None):
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -51,6 +62,16 @@ def get_user(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id=?', (user_id,))
+    user_data = cursor.fetchone()
+    conn.close()
+    return user_data
+
+
+# Получение случайного пользователя
+def get_random_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id!=? ORDER BY RANDOM() LIMIT 1', (user_id,))
     user_data = cursor.fetchone()
     conn.close()
     return user_data
@@ -88,6 +109,25 @@ def get_telegram_username(user_id):
     username = cursor.fetchone()
     conn.close()
     return username[0] if username else None
+
+
+# Добавление лайка в базу данных
+def add_like(user_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO likes (user_id, liked_user_id)
+            VALUES (?, ?)
+        ''', (user_id, liked_user_id))
+        conn.commit()
+    except sqlite3.IntegrityError as e:
+        print(
+            f"Error: Невозможно добавить лайк, возможно данный лайк уже существует или указан несуществующий пользователь. Ошибка: {e}")
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+    finally:
+        conn.close()
 
 
 # Удаление пользователя из базы данных
