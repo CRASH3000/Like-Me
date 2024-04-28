@@ -1,9 +1,18 @@
 import telebot
 from telebot import types
 import database_manager
+import os
+from dotenv import load_dotenv
 
-API_TOKEN = 'TOKEN'
+load_dotenv()
+
+API_TOKEN = os.getenv("API_TOKEN")
 bot = telebot.TeleBot(API_TOKEN)
+
+if API_TOKEN is None:
+    print("Ошибка: Токен API не найден.")
+else:
+    print("Токен API успешно загружен")
 
 # USER_STATE = {} Словарь для хранения состояний пользователей
 USER_DATA = {}  # Словарь для хранения данных пользователей
@@ -412,4 +421,5 @@ def handle_decline(call):
 
 if __name__ == '__main__':
     database_manager.create_table()
+    print("Бот запущен")
     bot.polling(none_stop=True)

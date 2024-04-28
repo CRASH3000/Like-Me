@@ -46,10 +46,13 @@
     pip install -r requirements.txt
     ```
 4. Добавьте свой токен бота:
-    В файле `main.py` вставьте свой токен бота, который вы получили у BotFather
+    * Создайте файл .env в корне проекта;
+    * Добавьте токен вашего бота в файл .env (без кавычек):
     ```python
-   API_TOKEN = 'YOUR TOKEN'
+   API_TOKEN=ваш_токен
    ```
+   * Убедитесь, что файл .env добавлен в .gitignore.
+   
 5. Запустите чат бота:
     ```bash
     python main.py
