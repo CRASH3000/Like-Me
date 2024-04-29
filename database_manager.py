@@ -34,6 +34,13 @@ def create_table():
                 FOREIGN KEY (liked_user_id) REFERENCES users (id)
             )
         ''')
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS viewed_profiles (
+    user_id INTEGER,
+    viewed_user_id INTEGER,
+    PRIMARY KEY (user_id, viewed_user_id)
+    )
+    ''')
     conn.commit()
     conn.close()
 
@@ -67,14 +74,39 @@ def get_user(user_id):
     return user_data
 
 
+def mark_profile_as_viewed(user_id, viewed_user_id):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR IGNORE INTO viewed_profiles (user_id, viewed_user_id) VALUES (?, ?)",
+                       (user_id, viewed_user_id))
+        conn.commit()
+        print("Запись добавлена или уже существовала:", user_id, viewed_user_id)
+    except Exception as e:
+        print(f"Ошибка при добавлении в базу данных: {e}")
+    finally:
+        conn.close()
+
+
 # Получение случайного пользователя
 def get_random_user(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE id!=? ORDER BY RANDOM() LIMIT 1', (user_id,))
-    user_data = cursor.fetchone()
-    conn.close()
-    return user_data
+    try:
+        cursor = conn.cursor()
+        # Исключаем пользователей, чьи профили уже были просмотрены
+        cursor.execute("""
+            SELECT * FROM users 
+            WHERE id NOT IN (
+                SELECT viewed_user_id FROM viewed_profiles WHERE user_id=?
+            )
+            AND id != ?  
+            ORDER BY RANDOM() 
+            LIMIT 1
+        """, (user_id, user_id))
+        user_data = cursor.fetchone()
+        return user_data
+    finally:
+        conn.close()
 
 
 # Обновление данных пользователя
@@ -137,3 +169,4 @@ def delete_user(user_id):
     cursor.execute('DELETE FROM users WHERE id=?', (user_id,))
     conn.commit()
     conn.close()
+
