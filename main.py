@@ -33,6 +33,8 @@ STATE_PROFILE = 12
 STATE_EDIT_PROFILE = 13
 STATE_DELETE_PROFILE = 14
 STATE_DELETE_PROFILE_CONFIRM = 15
+STATE_WAITING_FOR_PROFILE_UPDATE = 16
+STATE_WAITING_FOR_PHOTO = 17
 
 
 # Функция для обновления состояния пользователя
@@ -390,7 +392,7 @@ def handle_like(call):
         reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="go_to_main_menu"))
         bot.send_photo(
             chat_id=liked_user_id,
-            photo=user_data[6],  # Индекс, где хранится URL фотографии пользователя 1
+            photo=user_data[6],
             caption=f"Вас лайкнул:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
                     f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
             reply_markup=reply_markup

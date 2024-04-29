@@ -169,4 +169,3 @@ def delete_user(user_id):
     cursor.execute('DELETE FROM users WHERE id=?', (user_id,))
     conn.commit()
     conn.close()
-
