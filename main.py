@@ -34,6 +34,8 @@ STATE_PROFILE = 12
 STATE_EDIT_PROFILE = 13
 STATE_DELETE_PROFILE = 14
 STATE_DELETE_PROFILE_CONFIRM = 15
+STATE_WAITING_FOR_PROFILE_UPDATE = 16
+STATE_WAITING_FOR_PHOTO = 17
 
 
 # Функция для обновления состояния пользователя
@@ -394,6 +396,8 @@ def start_searching(call):
     if user_data:
         print(f"User data: {user_data[1]}")
 
+        database_manager.mark_profile_as_viewed(user_id, user_data[0])
+
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
             types.InlineKeyboardButton("Да", callback_data=f"like_{user_data[0]}"),
@@ -419,47 +423,69 @@ def no_search_profile(call):
 
 
 # Обработчик для кнопки "Да"
-@bot.callback_query_handler(func=lambda call: call.data.startswith("like_"))
-def like_search_profile(call):
-    liked_user_id = int(call.data.split("_")[1])
+@bot.callback_query_handler(func=lambda call: call.data.startswith('like_'))
+def handle_like(call):
     user_id = call.from_user.id
+    liked_user_id = int(call.data.split('_')[1])
 
-    database_manager.add_like(call.from_user.id, liked_user_id)
+    database_manager.add_like(user_id, liked_user_id)
 
-    check_for_likes(user_id, liked_user_id)
+    user_data = database_manager.get_user(user_id)
 
+    bot.send_message(user_id, "Ваш лайк успешно отправлен!")
 
-# Проверка и отправка уведомлений о лайках
-def check_for_likes(user_id, liked_user_id):
-    conn = database_manager.get_connection()
-    cursor = conn.cursor()
-    # Проверяем, поставил ли лайк пользователь, которому мы понравились
-    cursor.execute('''
-        SELECT u.id, u.name, u.city, u.descriptions, u.status, u.age, u.photo, u.telegram_username
-        FROM users u
-        JOIN likes l ON u.id = l.user_id
-        WHERE l.liked_user_id = ? AND l.user_id IN (SELECT liked_user_id FROM likes WHERE user_id = ?)
-    ''', (liked_user_id, user_id))
-    mutual_likes = cursor.fetchall()
-    for like in mutual_likes:
-        liked_user_id, name, city, descriptions, status, age, photo, telegram_username = like
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Можно пообщаться", url=f"tg://user?id={telegram_username}"))
-        message_text = (f"Вас лайкнул {name}, хотите с ним пообщаться? Город: {city}, Описание: {descriptions},"
-                        f" Цель: {status}, Возраст: {age}")
-        bot.send_photo(user_id, photo, caption=message_text, reply_markup=markup)
-    conn.close()
+    if user_data:
+        reply_markup = types.InlineKeyboardMarkup()
+        reply_markup.add(
+            types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liked_user_id}"))
+        reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="go_to_main_menu"))
+        bot.send_photo(
+            chat_id=liked_user_id,
+            photo=user_data[6],
+            caption=f"Вас лайкнул:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
+                    f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+            reply_markup=reply_markup
+        )
+
+    try:
+        next_user_data = database_manager.get_random_user(user_id)
+
+        if next_user_data:
+            reply_markup = types.InlineKeyboardMarkup()
+            reply_markup.add(
+                types.InlineKeyboardButton("Да", callback_data=f"like_{next_user_data[0]}"),
+                types.InlineKeyboardButton("Нет", callback_data="next_profile")
+            )
+            reply_markup.row(types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu"))
+
+            bot.send_photo(
+                chat_id=user_id,
+                photo=next_user_data[6],
+                caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
+                        f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                reply_markup=reply_markup
+            )
+        else:
+            bot.send_message(user_id, "Нет доступных анкет.")
+    except Exception as e:
+        print(f"Error: {e}")
+        bot.send_message(user_id, "Произошла ошибка при поиске следующего профиля.")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('accept_'))
 def handle_accept(call):
-    liked_user_id = call.data.split('_')[1]
+    # Разделение callback_data для получения ID пользователя и ID лайкнутого пользователя
+    _, user_id, liked_user_id = call.data.split('_')
+    user_id = int(user_id)
+    liked_user_id = int(liked_user_id)
+
     # Получаем данные обоих пользователей
-    user_data = database_manager.get_user(call.from_user.id)
+    user_data = database_manager.get_user(user_id)
     liked_user_data = database_manager.get_user(liked_user_id)
+
     if user_data and liked_user_data:
-        bot.send_message(call.from_user.id, f"Вы понравились друг другу! Начните общение: @{liked_user_data[8]}")
-        bot.send_message(liked_user_id, f"Вас лайкнул {user_data[1]}, начните общение: @{user_data[8]}")
+        bot.send_message(user_id, f"Вы понравились друг другу! Начните общение: @{liked_user_data[9]}")
+        bot.send_message(liked_user_id, f"Вас лайкнул {user_data[1]}, начните общение: @{user_data[9]}")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('decline_'))
