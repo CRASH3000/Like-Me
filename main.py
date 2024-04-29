@@ -3,6 +3,7 @@ from telebot import types
 import database_manager
 import os
 from dotenv import load_dotenv
+from data_messages import messages
 
 load_dotenv()
 
@@ -54,12 +55,15 @@ def get_state(user_id):
 # Старт регистрации
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
-    caption = "Нажмите на кнопку ниже, чтобы зарегистрироваться:"
+    welcome_data = messages["welcome_message"]
+    img_url = welcome_data["image_url"]
+    message_text = welcome_data["text"]
+    button_text = welcome_data["button_text"]
+
     markup = types.InlineKeyboardMarkup()
-    reg_button = types.InlineKeyboardButton("Регистрация", callback_data='register')
+    reg_button = types.InlineKeyboardButton(button_text, callback_data='register')
     markup.add(reg_button)
-    bot.send_photo(message.chat.id, img_url, caption=caption, reply_markup=markup)
+    bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup, parse_mode="HTML")
 
 
 # Обработчик для кнопки регистрации
@@ -70,7 +74,9 @@ def age_request(call):
     # Создаем пользователя с начальным состоянием в БД
     database_manager.add_user(user_id=user_id, state=STATE_ASK_AGE)
     set_state(user_id, STATE_ASK_AGE)
-    bot.send_message(call.message.chat.id, "Перед тем как начать, давай создадим твой профиль. Сколько тебе лет?.")
+
+    age_request_text = messages["age_request_message"]["text"]
+    bot.send_message(call.message.chat.id, age_request_text, parse_mode="HTML")
 
 
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE)
@@ -79,22 +85,27 @@ def age_input(message):
     try:
         age = int(message.text)
         if age < 16:
-            bot.send_message(message.chat.id, "Извини. Но чат-ботом могут пользоваться только лица старше 16 лет.")
+            error_text = messages["age_input_message"]["error_text_age_under_16"]
+            bot.send_message(message.chat.id, error_text)
             database_manager.delete_user(user_id)  # Удаление пользователя из БД
             set_state(user_id, None)
         else:
             # Добавляем возраст пользователя в БД
             database_manager.update_user(user_id, age=age)
             set_state(user_id, STATE_ASK_CONSENT)
+            consent_text = messages["age_input_message"]["text_consent_messages"]
+            button_yes = messages["age_input_message"]["button_text_yes"]
+            button_no = messages["age_input_message"]["button_text_no"]
+
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton("Да", callback_data="consent_yes"),
-                       types.InlineKeyboardButton("Нет", callback_data="consent_no"))
-            bot.send_message(message.chat.id,
-                             "Для работы с чат-ботом требуется твое разрешение на использование ссылки на ваш "
-                             "профиль. Вы согласны?",
-                             reply_markup=markup)
+            markup.add(types.InlineKeyboardButton(button_yes,
+                                                  callback_data="consent_yes"),
+                       types.InlineKeyboardButton(button_no,
+                                                  callback_data="consent_no"))
+            bot.send_message(message.chat.id, consent_text, reply_markup=markup, parse_mode="HTML")
     except ValueError:
-        bot.send_message(message.chat.id, "Пожалуйста, введите ваш возраст цифрами.")
+        error_text = messages["age_input_message"]["error_text_invalid_data_type"]
+        bot.send_message(message.chat.id, error_text, parse_mode="HTML")
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "consent_yes")
@@ -104,9 +115,9 @@ def consent_yes(call):
     database_manager.update_user(user_id, telegram_username=telegram_username)
 
     set_state(user_id, STATE_ENTER_NAME)
+    text_yes = messages["consent_yes_message"]["text"]
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text="Хорошо, с формальностями закончили, давай продолжим создавать твой профиль."
-                               " Как тебя зовут?.", reply_markup=None)  # Удаляем клавиатуру
+                          text=text_yes, reply_markup=None)  # Удаляем клавиатуру
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "consent_no")
@@ -114,25 +125,32 @@ def consent_no(call):
     user_id = call.from_user.id
     database_manager.delete_user(user_id)  # Удаляем пользователя из БД
     set_state(user_id, None)
+
+    text_no = messages["consent_no_message"]["text"]
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text="Нам жаль, если передумаете, будем ждать вас.", reply_markup=None)
+                          text=text_no, reply_markup=None)
 
 
 # Обработчик текстовых сообщений для регистрации
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_NAME)
-def ask_name(message):
+def ask_gender(message):
     user_id = message.from_user.id
     name = message.text
     database_manager.update_user(user_id, name=name)
     set_state(user_id, STATE_ENTER_GENDER)
+
+    text_message = messages["ask_gender_message"]["text"]
+    button_male = messages["ask_gender_message"]["button_text_male"]
+    button_female = messages["ask_gender_message"]["button_text_female"]
+
     markup_gender = types.InlineKeyboardMarkup()
     buttons = [
-        types.InlineKeyboardButton("Мужчина", callback_data="gender_male"),
-        types.InlineKeyboardButton("Женщина", callback_data='gender_female'),
+        types.InlineKeyboardButton(button_male, callback_data="gender_male"),
+        types.InlineKeyboardButton(button_female, callback_data='gender_female'),
     ]
     for button in buttons:
         markup_gender.add(button)
-    bot.send_message(message.chat.id, "Выбери пол", reply_markup=markup_gender)
+    bot.send_message(message.chat.id, text_message, reply_markup=markup_gender, parse_mode="HTML")
 
 
 def get_gender_text(callback_data):
@@ -144,41 +162,51 @@ def get_gender_text(callback_data):
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ["gender_male", "gender_female"])
-def gender_selection(call):
+def ask_city(call):
     user_id = call.from_user.id
     gender_text = get_gender_text(call.data)
     database_manager.update_user(user_id, gender=gender_text)
     set_state(user_id, STATE_ENTER_CITY)
+
+    message_text = messages["ask_city_message"]["text"]
     bot.answer_callback_query(call.id)  # подтверждение получения callback
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text="В каком городе ты живешь?", reply_markup=None)
+                          text=message_text, reply_markup=None)
 
 
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_CITY)
-def ask_city(message):
+def ask_descriptions(message):
     user_id = message.from_user.id
     city = message.text
     database_manager.update_user(user_id, city=city)
     set_state(message.from_user.id, STATE_DESCRIPTIONS)
-    bot.send_message(message.chat.id, "Расскажи немного о себе")
+
+    message_text = messages["ask_descriptions_message"]["text"]
+    bot.send_message(message.chat.id, message_text, parse_mode="HTML")
 
 
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS)
-def ask_descriptions(message):
+def ask_status(message):
     user_id = message.from_user.id
     descriptions = message.text
     database_manager.update_user(user_id, descriptions=descriptions)
     set_state(message.from_user.id, STATE_CHOOSE_STATUS)
 
+    ask_status_data = messages["ask_status_message"]
+    message_text = ask_status_data["text"]
+    button_status_1 = ask_status_data["button_text_status_1"]
+    button_status_2 = ask_status_data["button_text_status_2"]
+    button_status_3 = ask_status_data["button_text_status_3"]
+
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
-        types.InlineKeyboardButton("Найти друзей", callback_data="status_find_friends"),
-        types.InlineKeyboardButton("Найти вторую половинку", callback_data='status_find_love'),
-        types.InlineKeyboardButton("Просто пообщаться", callback_data='status_just_chat')
+        types.InlineKeyboardButton(button_status_1, callback_data="status_find_friends"),
+        types.InlineKeyboardButton(button_status_2, callback_data='status_find_love'),
+        types.InlineKeyboardButton(button_status_3, callback_data='status_just_chat')
     ]
     for button in buttons:
         markup_status.add(button)
-    bot.send_message(message.chat.id, "Какую цель общения вы ищете?", reply_markup=markup_status)
+    bot.send_message(message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML")
 
 
 def get_status_text(callback_data):
@@ -193,14 +221,16 @@ def get_status_text(callback_data):
 
 @bot.callback_query_handler(
     func=lambda call: call.data in ["status_find_friends", "status_find_love", "status_just_chat"])
-def status_selection(call):
+def ask_photo(call):
     user_id = call.from_user.id
     status_text = get_status_text(call.data)
     database_manager.update_user(user_id, status=status_text)
     set_state(user_id, STATE_UPLOAD_PHOTO)
+
+    message_text = messages["ask_photo_message"]["text"]
     bot.answer_callback_query(call.id)  # подтверждение получения callback
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text="Теперь загрузите ваше фото", reply_markup=None)
+                          text=message_text, reply_markup=None)
 
 
 @bot.message_handler(content_types=['photo'],
@@ -211,12 +241,14 @@ def photo_and_final_register(message):
     database_manager.update_user(user_id, photo=photo_id)  # Обновляем профиль пользователя в базе данных с новым фото
     set_state(user_id, STATE_CREATE_PROFILE)
 
-    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
-    caption = "Нажмите на кнопку ниже, чтобы зарегистрироваться:"
+    photo_and_final_register_data = messages["photo_and_final_register_message"]
+    img_url = photo_and_final_register_data["image_url"]
+    message_text = photo_and_final_register_data["text"]
+    button = photo_and_final_register_data["button_text"]
     markup = types.InlineKeyboardMarkup()
-    reg_button = types.InlineKeyboardButton("Супер, давай же начнем!", callback_data='show_profile')
+    reg_button = types.InlineKeyboardButton(button, callback_data='show_profile')
     markup.add(reg_button)
-    bot.send_photo(message.chat.id, img_url, caption=caption, reply_markup=markup)
+    bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup, parse_mode="HTML")
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_profile")
@@ -252,16 +284,20 @@ def show_profile(call):
 def edit_profile(call):
     set_state(call.from_user.id, STATE_EDIT_PROFILE)
 
-    caption = "Этот функционал еще не разработан. Приходите сюда позже :)"
+    edit_profile_data = messages["profile_edit_message"]
+    image_url = edit_profile_data["image_url"]
+    message_text = edit_profile_data["text"]
+    button_text = edit_profile_data["button_text_back"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Назад", callback_data='show_profile'))
+    markup.add(types.InlineKeyboardButton(button_text, callback_data='show_profile'))
 
     bot.edit_message_media(
-        media=types.InputMediaPhoto("https://telegra.ph/file/ad7079ce8110af0f35771.png", caption=caption),
+        media=types.InputMediaPhoto(image_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         reply_markup=markup
+
     )
 
 
@@ -269,14 +305,18 @@ def edit_profile(call):
 def confirm_delete_profile(call):
     set_state(call.from_user.id, STATE_DELETE_PROFILE)
 
-    caption = "Вы точно хотите удалить свой профиль? Это действие отменить нельзя"
+    confirm_delete_profile_data = messages["profile_delete_confirm_message"]
+    image_url = confirm_delete_profile_data["image_url"]
+    message_text = confirm_delete_profile_data["text"]
+    button_text_confirm = confirm_delete_profile_data["button_text_confirm_delete"]
+    button_text_cancel = confirm_delete_profile_data["button_text_cancel"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Да, удалить", callback_data="confirm_delete_profile"),
-               types.InlineKeyboardButton("Нет, вернуться назад", callback_data="show_profile"))
+    markup.add(types.InlineKeyboardButton(button_text_confirm, callback_data="confirm_delete_profile"),
+               types.InlineKeyboardButton(button_text_cancel, callback_data="show_profile"))
 
     bot.edit_message_media(
-        media=types.InputMediaPhoto("https://telegra.ph/file/ad7079ce8110af0f35771.png", caption=caption),
+        media=types.InputMediaPhoto(image_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         reply_markup=markup
@@ -288,11 +328,12 @@ def delete_profile(call):
     database_manager.delete_user(call.from_user.id)
     set_state(call.from_user.id, STATE_DELETE_PROFILE_CONFIRM)
 
-    img_url = "https://telegra.ph/file/ad7079ce8110af0f35771.png"
-    caption = "Ваш профиль удален. \nЖалко, что вы ушли. Если передумаете, мы всегда будем рады вас видеть вновь."
+    delete_profile_data = messages["profile_deleted_message"]
+    img_url = delete_profile_data["image_url"]
+    message_text = delete_profile_data["text"]
 
     bot.edit_message_media(
-        media=types.InputMediaPhoto(img_url, caption=caption),
+        media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
     )
@@ -304,18 +345,23 @@ def delete_profile(call):
 def main_screen(call):
     print("1111")
     set_state(call.from_user.id, STATE_MAIN_SCREEN)
-    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
-    caption = "Добро пожаловать на главный экран, тут вы сможете начать поиск спутников, узнать о проекте и настроить свой профиль."
+
+    main_screen_data = messages["main_screen_message"]
+    img_url = main_screen_data["image_url"]
+    message_text = main_screen_data["text"]
+    button_text_start_searching = main_screen_data["button_text_start_searching"]
+    button_text_profile = main_screen_data["button_text_profile"]
+    button_text_about = main_screen_data["button_text_about"]
 
     markup_main_buttons = types.InlineKeyboardMarkup()
-    markup_main_buttons.row(types.InlineKeyboardButton("Начать поиск", callback_data="start_searching"))
+    markup_main_buttons.row(types.InlineKeyboardButton(button_text_start_searching, callback_data="start_searching"))
     # С помощью метода .row() можно сделать одну большую кнопку
 
-    markup_main_buttons.add(types.InlineKeyboardButton("Мой профиль", callback_data='show_profile'),
-                            types.InlineKeyboardButton("О Проекте", callback_data='about_project'))
+    markup_main_buttons.add(types.InlineKeyboardButton(button_text_profile, callback_data='show_profile'),
+                            types.InlineKeyboardButton(button_text_about, callback_data='about_project'))
     # Метод .add() добавляет каждую кнопку в новый ряд, что позволяет сделать в одном ряду две маленькие кнопки
 
-    bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption=caption),
+    bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
                            chat_id=call.message.chat.id,
                            message_id=call.message.message_id,
                            reply_markup=markup_main_buttons)
@@ -325,12 +371,15 @@ def main_screen(call):
 def about_project(call):
     print("Handling about_project callback...")
     set_state(call.from_user.id, STATE_ABOUT_PROJECT)
-    img_url = 'https://telegra.ph/file/ad7079ce8110af0f35771.png'
-    caption = "Здесь описание проекта."
+
+    about_project_data = messages["about_project_message"]
+    img_url = about_project_data["image_url"]
+    message_text = about_project_data["text"]
+    button_text = about_project_data["button_text_back"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Назад", callback_data='go_to_main_menu'))
-    bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption=caption),
+    markup.add(types.InlineKeyboardButton(button_text, callback_data='go_to_main_menu'))
+    bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
                            chat_id=call.message.chat.id,
                            message_id=call.message.message_id,
                            reply_markup=markup)
