@@ -1,5 +1,7 @@
 import sqlite3
 
+from main import STATE_SEARCHING
+
 
 # Подключение к базе данных (или ее создание, если она не существует)
 def get_connection():
@@ -39,6 +41,15 @@ def create_table():
     user_id INTEGER,
     viewed_user_id INTEGER,
     PRIMARY KEY (user_id, viewed_user_id)
+    )
+    ''')
+    cursor.execute('''
+    Create TABLE IF NOT EXISTS queued_profiles (
+    user_id INTEGER,
+    queued_user_id INTEGER,
+    PRIMARY KEY (user_id, queued_user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (queued_user_id) REFERENCES users(id)
     )
     ''')
     conn.commit()
@@ -153,11 +164,55 @@ def add_like(user_id, liked_user_id):
             VALUES (?, ?)
         ''', (user_id, liked_user_id))
         conn.commit()
-    except sqlite3.IntegrityError as e:
-        print(
-            f"Error: Невозможно добавить лайк, возможно данный лайк уже существует или указан несуществующий пользователь. Ошибка: {e}")
+
+        # Проверяем состояние пользователя, которому ставят лайк
+        if get_user_state(liked_user_id) == STATE_SEARCHING:
+            cursor.execute('''
+                INSERT OR IGNORE INTO queued_profiles (user_id, queued_user_id)
+                VALUES (?, ?)
+            ''', (liked_user_id, user_id))
+            conn.commit()
+
     except sqlite3.Error as e:
         print(f"Database error: {e}")
+    finally:
+        conn.close()
+
+
+def has_like(user_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT EXISTS(
+                SELECT 1 FROM likes WHERE user_id = ? AND liked_user_id = ?
+            )
+        """, (user_id, liked_user_id))
+        return cursor.fetchone()[0] == 1
+    except Exception as e:
+        print(f"Ошибка при проверке лайка: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+
+def get_next_profile(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Проверка наличия профилей в очереди
+        cursor.execute("SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1", (user_id,))
+        queued_user = cursor.fetchone()
+        if queued_user:
+            queued_user_id = queued_user[0]
+            cursor.execute("DELETE FROM queued_profiles WHERE user_id=? AND queued_user_id=?",
+                           (user_id, queued_user_id))
+            conn.commit()
+            return get_user(queued_user_id)
+
+        # Если в очереди нет профилей, ищем случайного пользователя
+        return get_random_user(user_id)
     finally:
         conn.close()
 
