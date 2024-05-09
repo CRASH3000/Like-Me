@@ -53,8 +53,10 @@ messages = {
     },
     "profile_edit_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
-        "text": "Этот функционал еще не разработан. Приходи сюда позже :)",
-        "button_text_back": "Назад"
+        "text": "Этот функционал еще не разработан. Приходите сюда позже :)",
+        "button_text_back": "Назад",
+        "button_text_edit_name": "Имя",
+        "text2": "<b>Данные успешной обновлены!</b>"
     },
     "profile_delete_confirm_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",

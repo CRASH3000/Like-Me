@@ -43,15 +43,6 @@ def create_table():
     PRIMARY KEY (user_id, viewed_user_id)
     )
     ''')
-    cursor.execute('''
-    Create TABLE IF NOT EXISTS queued_profiles (
-    user_id INTEGER,
-    queued_user_id INTEGER,
-    PRIMARY KEY (user_id, queued_user_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (queued_user_id) REFERENCES users(id)
-    )
-    ''')
     conn.commit()
     conn.close()
 
