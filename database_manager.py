@@ -1,7 +1,5 @@
 import sqlite3
 
-from main import STATE_SEARCHING
-
 
 # Подключение к базе данных (или ее создание, если она не существует)
 def get_connection():
