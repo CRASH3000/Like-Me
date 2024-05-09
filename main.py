@@ -4,6 +4,7 @@ import database_manager
 import os
 from dotenv import load_dotenv
 from data_messages import messages
+from bot_logic import profile_editing
 
 load_dotenv()
 
@@ -494,6 +495,8 @@ def about_project(call):
 def start_searching(call):
     user_id = call.from_user.id
     user_data = database_manager.get_next_profile(user_id)  # Получаем следующего пользователя из базы данных
+    main_screen_data = messages["main_screen_message"]
+    img_url = main_screen_data["image_url"]
     set_state(user_id, STATE_SEARCHING)
 
     if user_data:
@@ -518,12 +521,15 @@ def start_searching(call):
             reply_markup=reply_markup
         )
     else:
-        reply_markup = types.InlineKeyboardMarkup()
-        reply_markup.add(
+        markup = types.InlineKeyboardMarkup()
+        markup.add(
             types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
             types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
         )
-        bot.send_message(call.message.chat.id, "Нет доступных анкет.", reply_markup=reply_markup)
+        bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+                               chat_id=call.message.chat.id,
+                                message_id=call.message.message_id,
+                                reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == 'next_profile')
@@ -536,6 +542,8 @@ def no_search_profile(call):
 def handle_like(call):
     user_id = call.from_user.id
     liked_user_id = int(call.data.split('_')[1])
+    main_screen_data = messages["main_screen_message"]
+    img_url = main_screen_data["image_url"]
 
     database_manager.add_like(user_id, liked_user_id)
     send_temporary_confirmation(user_id, "Ваш лайк успешно отправлен!")
@@ -586,13 +594,15 @@ def handle_like(call):
                 reply_markup=reply_markup
             )
         else:
-            bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            reply_markup = types.InlineKeyboardMarkup()
-            reply_markup.add(
+            markup = types.InlineKeyboardMarkup()
+            markup.add(
                 types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
                 types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
             )
-            bot.send_message(call.message.chat.id, "Нет доступных анкет.", reply_markup=reply_markup)
+            bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+                                   chat_id=call.message.chat.id,
+                                   message_id=call.message.message_id,
+                                   reply_markup=markup)
     except Exception as e:
         print(f"Error: {e}")
         bot.send_message(user_id, "Произошла ошибка при поиске следующего профиля.")
