@@ -111,3 +111,44 @@ def update_status_complete(call, bot, set_state, STATUS_UPDATE_COMPLETE):
     database_manager.update_user(user_id, status=status_text)
     set_state(call.message.chat.id, STATUS_UPDATE_COMPLETE)
     send_profile_edit_message(call, bot, call.message.chat.id, set_state, STATUS_UPDATE_COMPLETE)
+
+
+def edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE):
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+    set_state(call.from_user.id, STATE_WAITING_FOR_CITY_UPDATE)
+    text_message = "Введите ваше новое город"
+    bot.send_message(call.message.chat.id, text_message)
+
+
+def update_city(message):
+    user_id = message.from_user.id
+    city = message.text
+    database_manager.update_user(user_id, city=city)
+
+
+def update_city_complete(message, bot, set_state, STATE_CITY_UPDATE_COMPLETE):
+    set_state(message.chat.id, STATE_CITY_UPDATE_COMPLETE)
+    update_city(message)
+    send_profile_edit_message(message, bot, set_state, STATE_CITY_UPDATE_COMPLETE)
+
+
+def edit_photo(call, bot, set_state, STATE_WAITING_FOR_PHOTO_UPDATE):
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+
+    set_state(call.from_user.id, STATE_WAITING_FOR_PHOTO_UPDATE)
+    text_message = "Отправьте новое фото"
+    bot.answer_callback_query(call.id)
+    bot.send_message(call.message.chat.id, text_message)
+
+
+def update_photo(message):
+    user_id = message.from_user.id
+    photo_id = message.photo[-1].file_id
+    database_manager.update_user(user_id, photo=photo_id)
+
+
+def update_photo_complete(message, bot, set_state, STATE_PHOTO_UPDATE_COMPLETE):
+    set_state(message.user_id, STATE_PHOTO_UPDATE_COMPLETE)
+    update_photo(message)
+    send_profile_edit_message(message, bot, set_state, STATE_PHOTO_UPDATE_COMPLETE)

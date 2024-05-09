@@ -41,7 +41,11 @@ STATE_WAITING_FOR_DESCRIPTIONS_UPDATE = 18
 STATUS_DESCRIPTIONS_UPDATE_COMPLETE = 19
 STATE_WAITING_FOR_STATUS_UPDATE = 20
 STATUS_UPDATE_COMPLETE = 21
-STATE_WAITING_FOR_PHOTO = 22
+STATE_WAITING_FOR_CITY_UPDATE = 22
+STATE_CITY_UPDATE_COMPLETE = 23
+STATE_WAITING_FOR_PHOTO_UPDATE = 24
+STATE_PHOTO_UPDATE_COMPLETE = 25
+STATE_WAITING_FOR_PHOTO = 26
 
 
 # Функция для обновления состояния пользователя
@@ -373,6 +377,29 @@ def edit_status_callback(call):
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
     profile_editing.update_status_complete(call, bot, set_state, STATE_EDIT_PROFILE)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "edit_city")
+def edit_city_callback(call):
+    profile_editing.edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE)
+
+
+@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_CITY_UPDATE)
+def update_city_callback(message):
+    profile_editing.update_city(message)
+    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "edit_photo")
+def edit_photo_callback(call):
+    profile_editing.edit_photo(call, bot, set_state, STATE_WAITING_FOR_PHOTO_UPDATE)
+
+
+@bot.message_handler(content_types=['photo'],
+                     func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_PHOTO_UPDATE)
+def update_photo_callback(message):
+    profile_editing.update_photo(message)
+    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "delete_profile")
