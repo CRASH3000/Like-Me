@@ -16,8 +16,8 @@ if API_TOKEN is None:
 else:
     print("Токен API успешно загружен")
 
+
 USER_DATA = {}  # Словарь для хранения данных пользователей
-profile_message_info = {}
 
 # Состояния
 STATE_ASK_AGE = 1
@@ -447,6 +447,8 @@ def delete_profile(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'go_to_main_menu')
 def main_screen(call):
     print("1111")
+    user_id = call.from_user.id
+    notify_likes(user_id)
     set_state(call.from_user.id, STATE_MAIN_SCREEN)
 
     main_screen_data = messages["main_screen_message"]
@@ -493,6 +495,8 @@ def about_project(call):
 def start_searching(call):
     user_id = call.from_user.id
     user_data = database_manager.get_next_profile(user_id)  # Получаем следующего пользователя из базы данных
+    main_screen_data = messages["main_screen_message"]
+    img_url = main_screen_data["image_url"]
     set_state(user_id, STATE_SEARCHING)
 
     if user_data:
@@ -517,7 +521,15 @@ def start_searching(call):
             reply_markup=reply_markup
         )
     else:
-        bot.send_message(call.message.chat.id, "Нет доступных анкет.")
+        markup = types.InlineKeyboardMarkup()
+        markup.add(
+            types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
+            types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
+        )
+        bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+                               chat_id=call.message.chat.id,
+                                message_id=call.message.message_id,
+                                reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data == 'next_profile')
@@ -530,18 +542,23 @@ def no_search_profile(call):
 def handle_like(call):
     user_id = call.from_user.id
     liked_user_id = int(call.data.split('_')[1])
+    main_screen_data = messages["main_screen_message"]
+    img_url = main_screen_data["image_url"]
 
     database_manager.add_like(user_id, liked_user_id)
-    bot.send_message(user_id, "Ваш лайк успешно отправлен!")
+    send_temporary_confirmation(user_id, "Ваш лайк успешно отправлен!")
 
     if check_mutual_like(user_id, liked_user_id):
         user_data = database_manager.get_user(user_id)
         liked_user_data = database_manager.get_user(liked_user_id)
         if user_data and liked_user_data:
-            bot.send_message(user_id,
-                             f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
-            bot.send_message(liked_user_id,
-                             f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+            send_temporary_confirmation(user_id,
+                                        f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. "
+                                        f"Начните общение: @{liked_user_data[9]}")
+            send_temporary_confirmation(liked_user_id,
+                                        f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+            database_manager.remove_mutual_likes(user_id, liked_user_id)
+
     elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
         user_data = database_manager.get_user(user_id)
         if user_data:
@@ -577,7 +594,15 @@ def handle_like(call):
                 reply_markup=reply_markup
             )
         else:
-            bot.send_message(user_id, "Нет доступных анкет.")
+            markup = types.InlineKeyboardMarkup()
+            markup.add(
+                types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
+                types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
+            )
+            bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+                                   chat_id=call.message.chat.id,
+                                   message_id=call.message.message_id,
+                                   reply_markup=markup)
     except Exception as e:
         print(f"Error: {e}")
         bot.send_message(user_id, "Произошла ошибка при поиске следующего профиля.")
@@ -585,6 +610,25 @@ def handle_like(call):
 
 def check_mutual_like(user_id, liked_user_id):
     return database_manager.has_like(user_id, liked_user_id) and database_manager.has_like(liked_user_id, user_id)
+
+
+def notify_likes(user_id):
+    likers = database_manager.get_likers(user_id)
+    for liker_id in likers:
+        liker_data = database_manager.get_user(liker_id)
+
+        reply_markup = types.InlineKeyboardMarkup()
+        reply_markup.add(types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"))
+        reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="decline_"))
+
+        bot.send_photo(
+            chat_id=user_id,
+            photo=liker_data[6],
+            caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
+                    f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+            reply_markup=reply_markup
+        )
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('accept_'))
@@ -599,15 +643,26 @@ def handle_accept(call):
     liked_user_data = database_manager.get_user(liked_user_id)
 
     if user_data and liked_user_data:
+        send_temporary_confirmation(user_id,
+                                    f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
+        send_temporary_confirmation(liked_user_id,
+                                    f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
 
-        bot.send_message(user_id, f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
-        bot.send_message(liked_user_id, f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+        database_manager.remove_mutual_likes(user_id, liked_user_id)
+        bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
-        bot.edit_message_reply_markup(
-            chat_id=call.message.chat.id,
-            message_id=call.message.message_id,
-            reply_markup=None
-        )
+
+@bot.callback_query_handler(func=lambda call: call.data == 'restart_searching')
+def restart_searching(call):
+    user_id = call.from_user.id
+    database_manager.reset_viewed_profiles(user_id)
+    start_searching(call)
+
+
+def send_temporary_confirmation(user_id, message_text):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("ОК", callback_data='decline_'))
+    bot.send_message(user_id, message_text, reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('decline_'))

@@ -1,7 +1,5 @@
 import sqlite3
 
-from main import STATE_SEARCHING
-
 
 # Подключение к базе данных (или ее создание, если она не существует)
 def get_connection():
@@ -41,6 +39,15 @@ def create_table():
     user_id INTEGER,
     viewed_user_id INTEGER,
     PRIMARY KEY (user_id, viewed_user_id)
+    )
+    ''')
+    cursor.execute('''
+    Create TABLE IF NOT EXISTS queued_profiles (
+    user_id INTEGER,
+    queued_user_id INTEGER,
+    PRIMARY KEY (user_id, queued_user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (queued_user_id) REFERENCES users(id)
     )
     ''')
     conn.commit()
@@ -156,7 +163,6 @@ def add_like(user_id, liked_user_id):
         ''', (user_id, liked_user_id))
         conn.commit()
 
-        # Проверяем состояние пользователя, которому ставят лайк
         if get_user_state(liked_user_id) == STATE_SEARCHING:
             cursor.execute('''
                 INSERT OR IGNORE INTO queued_profiles (user_id, queued_user_id)
@@ -166,6 +172,25 @@ def add_like(user_id, liked_user_id):
 
     except sqlite3.Error as e:
         print(f"Database error: {e}")
+    finally:
+        conn.close()
+
+
+def get_likers(liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT user_id FROM likes WHERE liked_user_id=?", (liked_user_id,))
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+def clear_liker_from_queue(liker_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM likes WHERE user_id=? AND liked_user_id=?", (liker_id, liked_user_id))
+        conn.commit()
     finally:
         conn.close()
 
@@ -185,7 +210,6 @@ def has_like(user_id, liked_user_id):
         return False
     finally:
         conn.close()
-
 
 
 def get_next_profile(user_id):
@@ -215,3 +239,31 @@ def delete_user(user_id):
     cursor.execute('DELETE FROM users WHERE id=?', (user_id,))
     conn.commit()
     conn.close()
+
+
+def reset_viewed_profiles(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Удаляем все записи о просмотренных профилях для данного пользователя
+        cursor.execute("DELETE FROM viewed_profiles WHERE user_id=?", (user_id,))
+        conn.commit()
+        print(f"Viewed profiles reset for user {user_id}.")
+    except Exception as e:
+        print(f"Error resetting viewed profiles for user {user_id}: {e}")
+    finally:
+        conn.close()
+
+
+def remove_mutual_likes(user_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        # Удаление лайков в обе стороны
+        cursor.execute("DELETE FROM likes WHERE (user_id=? AND liked_user_id=?) OR (user_id=? AND liked_user_id=?)",
+                       (user_id, liked_user_id, liked_user_id, user_id))
+        conn.commit()
+    except Exception as e:
+        print(f"Ошибка при удалении взаимных лайков: {e}")
+    finally:
+        conn.close()
