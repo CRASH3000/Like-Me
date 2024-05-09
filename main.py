@@ -46,6 +46,8 @@ STATE_CITY_UPDATE_COMPLETE = 23
 STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
+STATE_SEARCHING = 27
+
 
 
 # Функция для обновления состояния пользователя
@@ -490,7 +492,8 @@ def about_project(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'start_searching')
 def start_searching(call):
     user_id = call.from_user.id
-    user_data = database_manager.get_random_user(user_id)  # Получаем следующего пользователя из базы данных
+    user_data = database_manager.get_next_profile(user_id)  # Получаем следующего пользователя из базы данных
+    set_state(user_id, STATE_SEARCHING)
 
     if user_data:
         print(f"User data: {user_data[1]}")
@@ -505,11 +508,12 @@ def start_searching(call):
         reply_markup.row(types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
                          )
 
-        bot.send_photo(
+        bot.edit_message_media(
+            media=types.InputMediaPhoto(user_data[6],
+                                        caption=f"Хотите познакомится?\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
+                                                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"),
             chat_id=call.message.chat.id,
-            photo=user_data[6],
-            caption=f"Хотите познакомится?\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                    f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+            message_id=call.message.message_id,
             reply_markup=reply_markup
         )
     else:
@@ -528,26 +532,33 @@ def handle_like(call):
     liked_user_id = int(call.data.split('_')[1])
 
     database_manager.add_like(user_id, liked_user_id)
-
-    user_data = database_manager.get_user(user_id)
-
     bot.send_message(user_id, "Ваш лайк успешно отправлен!")
 
-    if user_data:
-        reply_markup = types.InlineKeyboardMarkup()
-        reply_markup.add(
-            types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liked_user_id}"))
-        reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="go_to_main_menu"))
-        bot.send_photo(
-            chat_id=liked_user_id,
-            photo=user_data[6],
-            caption=f"Вас лайкнул:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                    f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
-            reply_markup=reply_markup
-        )
+    if check_mutual_like(user_id, liked_user_id):
+        user_data = database_manager.get_user(user_id)
+        liked_user_data = database_manager.get_user(liked_user_id)
+        if user_data and liked_user_data:
+            bot.send_message(user_id,
+                             f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
+            bot.send_message(liked_user_id,
+                             f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+    elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
+        user_data = database_manager.get_user(user_id)
+        if user_data:
+            reply_markup = types.InlineKeyboardMarkup()
+            reply_markup.add(
+                types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liked_user_id}"))
+            reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="decline_"))
+            bot.send_photo(
+                chat_id=liked_user_id,
+                photo=user_data[6],
+                caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
+                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                reply_markup=reply_markup
+            )
 
     try:
-        next_user_data = database_manager.get_random_user(user_id)
+        next_user_data = database_manager.get_next_profile(user_id)
 
         if next_user_data:
             reply_markup = types.InlineKeyboardMarkup()
@@ -557,11 +568,12 @@ def handle_like(call):
             )
             reply_markup.row(types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu"))
 
-            bot.send_photo(
-                chat_id=user_id,
-                photo=next_user_data[6],
-                caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                        f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+            bot.edit_message_media(
+                media=types.InputMediaPhoto(next_user_data[6],
+                                            caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
+                                                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
                 reply_markup=reply_markup
             )
         else:
@@ -569,6 +581,10 @@ def handle_like(call):
     except Exception as e:
         print(f"Error: {e}")
         bot.send_message(user_id, "Произошла ошибка при поиске следующего профиля.")
+
+
+def check_mutual_like(user_id, liked_user_id):
+    return database_manager.has_like(user_id, liked_user_id) and database_manager.has_like(liked_user_id, user_id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('accept_'))
@@ -583,8 +599,15 @@ def handle_accept(call):
     liked_user_data = database_manager.get_user(liked_user_id)
 
     if user_data and liked_user_data:
-        bot.send_message(user_id, f"Вы понравились друг другу! Начните общение: @{liked_user_data[9]}")
-        bot.send_message(liked_user_id, f"Вас лайкнул {user_data[1]}, начните общение: @{user_data[9]}")
+
+        bot.send_message(user_id, f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
+        bot.send_message(liked_user_id, f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+
+        bot.edit_message_reply_markup(
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            reply_markup=None
+        )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('decline_'))
