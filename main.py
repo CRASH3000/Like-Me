@@ -5,6 +5,8 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing
+import sqlite3
+
 
 load_dotenv()
 
@@ -675,3 +677,27 @@ if __name__ == '__main__':
     database_manager.create_table()
     print("Бот запущен")
     bot.polling(none_stop=True)
+
+# Подключение к базе данных
+conn = sqlite3.connect('profiles.db')
+cursor = conn.cursor()
+
+
+# функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
+def filter_profiles(STATE_PROFILE):
+    conn = sqlite3.connect('users_database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM users_database WHERE gender != ? AND status = ?', (STATE_PROFILE)
+    filtered_profiles = cursor.fetchall()
+
+    conn.close()
+
+    return filtered_profiles
+
+#  функцию фильтрации для выбора соответствующих анкет.
+
+filtered_profiles = filter_profiles(STATE_PROFILE)
+
+for profile in filtered_profiles:
+    print(profile)
