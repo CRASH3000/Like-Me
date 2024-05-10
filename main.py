@@ -686,9 +686,9 @@ cursor = conn.cursor()
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 def filter_profiles(STATE_PROFILE):
     conn = sqlite3.connect('users_database.db')
-    cursor = conn.cursor()
+    cursor = conn.cursor() 
 
-    cursor.execute('SELECT * FROM users_database WHERE gender != ? AND status = ?', (STATE_PROFILE)
+    cursor.execute('SELECT * FROM users_database WHERE gender != ? AND status = ?'), (STATE_PROFILE)
     filtered_profiles = cursor.fetchall()
 
     conn.close()
