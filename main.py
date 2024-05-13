@@ -5,6 +5,8 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing
+import sqlite3
+
 
 load_dotenv()
 
@@ -654,3 +656,5 @@ if __name__ == '__main__':
     database_manager.create_table()
     print("Бот запущен")
     bot.polling(none_stop=True)
+
+

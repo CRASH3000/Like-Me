@@ -216,7 +216,7 @@ def get_next_profile(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Проверка наличия профилей в очереди
+        # Проверка наличия профилей в очереди 
         cursor.execute("SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1", (user_id,))
         queued_user = cursor.fetchone()
         if queued_user:
@@ -267,3 +267,28 @@ def remove_mutual_likes(user_id, liked_user_id):
         print(f"Ошибка при удалении взаимных лайков: {e}")
     finally:
         conn.close()
+
+
+# Подключение к базе данных
+conn = sqlite3.connect('profiles.db')
+cursor = conn.cursor()
+
+
+# функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
+def filter_profiles(STATE_PROFILE):
+    conn = sqlite3.connect('users_database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM users_database WHERE gender != ? AND status = ?'), (STATE_PROFILE)
+    filtered_profiles = cursor.fetchall()
+
+    conn.close()
+
+    return filtered_profiles
+
+#  функцию фильтрации для выбора соответствующих анкет.
+
+filtered_profiles = filter_profiles(STATE_PROFILE)
+
+for profile in filtered_profiles:
+    print(profile)
