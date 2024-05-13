@@ -267,3 +267,28 @@ def remove_mutual_likes(user_id, liked_user_id):
         print(f"Ошибка при удалении взаимных лайков: {e}")
     finally:
         conn.close()
+
+
+# Подключение к базе данных
+conn = sqlite3.connect('profiles.db')
+cursor = conn.cursor()
+
+
+# функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
+def filter_profiles(STATE_PROFILE):
+    conn = sqlite3.connect('users_database.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM users_database WHERE gender != ? AND status = ?'), (STATE_PROFILE)
+    filtered_profiles = cursor.fetchall()
+
+    conn.close()
+
+    return filtered_profiles
+
+#  функцию фильтрации для выбора соответствующих анкет.
+
+filtered_profiles = filter_profiles(STATE_PROFILE)
+
+for profile in filtered_profiles:
+    print(profile)
