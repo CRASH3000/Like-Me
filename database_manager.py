@@ -216,7 +216,7 @@ def get_next_profile(user_id):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Проверка наличия профилей в очереди
+        # Проверка наличия профилей в очереди 
         cursor.execute("SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1", (user_id,))
         queued_user = cursor.fetchone()
         if queued_user:
