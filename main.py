@@ -118,9 +118,17 @@ def age_request(call):
 @bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE)
 def age_input(message):
     user_id = message.from_user.id
+    if len(message.text) > 3:
+        error_text = messages["age_input_message"]["error_text_age_over_110"]
+        bot.send_message(message.chat.id, error_text)
+        return
+
     try:
         age = int(message.text)
-        if age < 16:
+        if age < 1 or age > 110:
+            error_text = messages["age_input_message"]["error_text_age_over_110"]
+            bot.send_message(message.chat.id, error_text)
+        elif age < 16:
             error_text = messages["age_input_message"]["error_text_age_under_16"]
             bot.send_message(message.chat.id, error_text)
             database_manager.delete_user(user_id)  # Удаление пользователя из БД
@@ -142,6 +150,7 @@ def age_input(message):
     except ValueError:
         error_text = messages["age_input_message"]["error_text_invalid_data_type"]
         bot.send_message(message.chat.id, error_text, parse_mode="HTML")
+
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "consent_yes")
