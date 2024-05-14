@@ -17,12 +17,26 @@ def command_start(message, bot, database_manager, STATE_MAIN_SCREEN):
 
         markup_main_buttons = types.InlineKeyboardMarkup()
         markup_main_buttons.row(
-            types.InlineKeyboardButton(button_text_start_searching, callback_data="start_searching"))
-        markup_main_buttons.add(types.InlineKeyboardButton(button_text_profile, callback_data='show_profile'),
-                                types.InlineKeyboardButton(button_text_about, callback_data='about_project'))
+            types.InlineKeyboardButton(
+                button_text_start_searching, callback_data="start_searching"
+            )
+        )
+        markup_main_buttons.add(
+            types.InlineKeyboardButton(
+                button_text_profile, callback_data="show_profile"
+            ),
+            types.InlineKeyboardButton(
+                button_text_about, callback_data="about_project"
+            ),
+        )
 
-        bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup_main_buttons,
-                       parse_mode="HTML")
+        bot.send_photo(
+            message.chat.id,
+            img_url,
+            caption=message_text,
+            reply_markup=markup_main_buttons,
+            parse_mode="HTML",
+        )
 
     else:
         welcome_data = messages["welcome_message"]
@@ -31,6 +45,12 @@ def command_start(message, bot, database_manager, STATE_MAIN_SCREEN):
         button_text = welcome_data["button_text"]
 
         markup = types.InlineKeyboardMarkup()
-        reg_button = types.InlineKeyboardButton(button_text, callback_data='register')
+        reg_button = types.InlineKeyboardButton(button_text, callback_data="register")
         markup.add(reg_button)
-        bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup, parse_mode="HTML")
+        bot.send_photo(
+            message.chat.id,
+            img_url,
+            caption=message_text,
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
