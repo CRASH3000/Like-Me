@@ -16,12 +16,13 @@ def age_request(call, bot, database_manager, STATE_ASK_AGE):
 
 def age_input(message, bot, database_manager, set_state, STATE_ASK_CONSENT):
     user_id = message.from_user.id
-    if len(message.text) > 3:
-        error_text = messages["age_input_message"]["error_text_age_over_110"]
-        bot.send_message(message.chat.id, error_text)
-        return
 
     try:
+        if len(message.text) > 3:
+            error_text = messages["age_input_message"]["error_text_age_over_110"]
+            bot.send_message(message.chat.id, error_text)
+            return
+
         age = int(message.text)
         if age < 1 or age > 110:
             error_text = messages["age_input_message"]["error_text_age_over_110"]
@@ -40,11 +41,13 @@ def age_input(message, bot, database_manager, set_state, STATE_ASK_CONSENT):
             button_no = messages["age_input_message"]["button_text_no"]
 
             markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton(button_yes,
-                                                  callback_data="consent_yes"),
-                       types.InlineKeyboardButton(button_no,
-                                                  callback_data="consent_no"))
-            bot.send_message(message.chat.id, consent_text, reply_markup=markup, parse_mode="HTML")
+            markup.add(
+                types.InlineKeyboardButton(button_yes, callback_data="consent_yes"),
+                types.InlineKeyboardButton(button_no, callback_data="consent_no"),
+            )
+            bot.send_message(
+                message.chat.id, consent_text, reply_markup=markup, parse_mode="HTML"
+            )
     except ValueError:
         error_text = messages["age_input_message"]["error_text_invalid_data_type"]
         bot.send_message(message.chat.id, error_text, parse_mode="HTML")
@@ -57,8 +60,12 @@ def button_yes(call, bot, database_manager, set_state, STATE_ENTER_NAME):
 
     set_state(user_id, STATE_ENTER_NAME)
     text_yes = messages["consent_yes_message"]["text"]
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=text_yes, reply_markup=None)  # Удаляем клавиатуру
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=text_yes,
+        reply_markup=None,
+    )  # Удаляем клавиатуру
 
 
 def button_no(call, bot, database_manager, set_state):
@@ -67,8 +74,12 @@ def button_no(call, bot, database_manager, set_state):
     set_state(user_id, None)
 
     text_no = messages["consent_no_message"]["text"]
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=text_no, reply_markup=None)
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=text_no,
+        reply_markup=None,
+    )
 
 
 # Обработчик текстовых сообщений для регистрации
@@ -84,11 +95,13 @@ def gender_request(message, bot, database_manager, set_state, STATE_ENTER_GENDER
     markup_gender = types.InlineKeyboardMarkup()
     buttons = [
         types.InlineKeyboardButton(button_male, callback_data="gender_male"),
-        types.InlineKeyboardButton(button_female, callback_data='gender_female'),
+        types.InlineKeyboardButton(button_female, callback_data="gender_female"),
     ]
     for button in buttons:
         markup_gender.add(button)
-    bot.send_message(message.chat.id, text_message, reply_markup=markup_gender, parse_mode="HTML")
+    bot.send_message(
+        message.chat.id, text_message, reply_markup=markup_gender, parse_mode="HTML"
+    )
 
 
 def get_gender_text(callback_data):
@@ -107,8 +120,12 @@ def city_request(call, bot, database_manager, set_state, STATE_ENTER_CITY):
 
     message_text = messages["ask_city_message"]["text"]
     bot.answer_callback_query(call.id)  # подтверждение получения callback
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=message_text, reply_markup=None)
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=message_text,
+        reply_markup=None,
+    )
 
 
 def descriptions_request(message, bot, database_manager, set_state, STATE_DESCRIPTIONS):
@@ -135,13 +152,17 @@ def status_selection(message, bot, database_manager, set_state, STATE_CHOOSE_STA
 
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
-        types.InlineKeyboardButton(button_status_1, callback_data="status_find_friends"),
-        types.InlineKeyboardButton(button_status_2, callback_data='status_find_love'),
-        types.InlineKeyboardButton(button_status_3, callback_data='status_just_chat')
+        types.InlineKeyboardButton(
+            button_status_1, callback_data="status_find_friends"
+        ),
+        types.InlineKeyboardButton(button_status_2, callback_data="status_find_love"),
+        types.InlineKeyboardButton(button_status_3, callback_data="status_just_chat"),
     ]
     for button in buttons:
         markup_status.add(button)
-    bot.send_message(message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML")
+    bot.send_message(
+        message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+    )
 
 
 def get_status_text(callback_data):
@@ -162,20 +183,32 @@ def sending_photo(call, bot, database_manager, set_state, STATE_UPLOAD_PHOTO):
 
     message_text = messages["ask_photo_message"]["text"]
     bot.answer_callback_query(call.id)  # подтверждение получения callback
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=message_text, reply_markup=None)
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=message_text,
+        reply_markup=None,
+    )
 
 
 def final_request(message, bot, database_manager, set_state, STATE_CREATE_PROFILE):
     user_id = message.from_user.id
     photo_id = message.photo[-1].file_id  # Получаем file_id самой большой версии фото
-    database_manager.update_user(user_id, photo=photo_id)  # Обновляем профиль пользователя в базе данных с новым фото
+    database_manager.update_user(
+        user_id, photo=photo_id
+    )  # Обновляем профиль пользователя в базе данных с новым фото
     set_state(user_id, STATE_CREATE_PROFILE)
     photo_and_final_register_data = messages["photo_and_final_register_message"]
     img_url = photo_and_final_register_data["image_url"]
     message_text = photo_and_final_register_data["text"]
     button = photo_and_final_register_data["button_text"]
     markup = types.InlineKeyboardMarkup()
-    reg_button = types.InlineKeyboardButton(button, callback_data='show_profile')
+    reg_button = types.InlineKeyboardButton(button, callback_data="show_profile")
     markup.add(reg_button)
-    bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup, parse_mode="HTML")
+    bot.send_photo(
+        message.chat.id,
+        img_url,
+        caption=message_text,
+        reply_markup=markup,
+        parse_mode="HTML",
+    )
