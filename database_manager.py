@@ -60,22 +60,33 @@ def create_table():
     )
     """
     )
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS friends (
+    user_id INTEGER,
+    friend_id INTEGER,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (friend_id) REFERENCES users(id)
+    )
+    """
+    )
     conn.commit()
     conn.close()
 
 
 # Добавление нового пользователя в базу данных
 def add_user(
-    user_id,
-    name=None,
-    city=None,
-    age=None,
-    descriptions=None,
-    status=None,
-    photo=None,
-    gender=None,
-    telegram_username=None,
-    state=None,
+        user_id,
+        name=None,
+        city=None,
+        age=None,
+        descriptions=None,
+        status=None,
+        photo=None,
+        gender=None,
+        telegram_username=None,
+        state=None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -145,11 +156,14 @@ def get_random_user(user_id):
             WHERE id NOT IN (
                 SELECT viewed_user_id FROM viewed_profiles WHERE user_id=?
             )
+            AND id NOT IN (
+                SELECT friend_id FROM friends WHERE user_id=?
+            )
             AND id != ?  
             ORDER BY RANDOM() 
             LIMIT 1
         """,
-            (user_id, user_id),
+            (user_id, user_id, user_id),
         )
         user_data = cursor.fetchone()
         return user_data
@@ -314,7 +328,8 @@ def reset_viewed_profiles(user_id):
         conn.close()
 
 
-def remove_mutual_likes(user_id, liked_user_id):
+# Функция для удаления взаимных лайков и добавления в друзья
+def remove_mutual_likes_and_add_friends(user_id, liked_user_id):
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -323,9 +338,69 @@ def remove_mutual_likes(user_id, liked_user_id):
             "DELETE FROM likes WHERE (user_id=? AND liked_user_id=?) OR (user_id=? AND liked_user_id=?)",
             (user_id, liked_user_id, liked_user_id, user_id),
         )
+        # Добавление в друзья
+        cursor.execute(
+            "INSERT INTO friends (user_id, friend_id) VALUES (?, ?), (?, ?)",
+            (user_id, liked_user_id, liked_user_id, user_id),
+        )
         conn.commit()
     except Exception as e:
-        print(f"Ошибка при удалении взаимных лайков: {e}")
+        print(f"Ошибка при удалении взаимных лайков и добавлении друзей: {e}")
+    finally:
+        conn.close()
+
+
+def get_friends(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT u.id, u.name, u.telegram_username 
+            FROM users u 
+            JOIN friends f ON u.id = f.friend_id 
+            WHERE f.user_id = ?
+            """, (user_id,)
+        )
+        friends = [{"id": row[0], "name": row[1], "username": row[2]} for row in cursor.fetchall()]
+        return friends
+    except sqlite3.Error as e:
+        print(f"Ошибка БД: {e}")
+        return []
+    finally:
+        conn.close()
+
+
+def add_friend(user_id, friend_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)",
+            (user_id, friend_id),
+        )
+        cursor.execute(
+            "INSERT INTO friends (user_id, friend_id) VALUES (?, ?)",
+            (friend_id, user_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка БД: {e}")
+    finally:
+        conn.close()
+
+
+def remove_friend(user_id, friend_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM friends WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?)",
+            (user_id, friend_id, friend_id, user_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка БД: {e}")
     finally:
         conn.close()
 
@@ -334,18 +409,17 @@ def remove_mutual_likes(user_id, liked_user_id):
 conn = sqlite3.connect("profiles.db")
 cursor = conn.cursor()
 
-
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
-    #conn = sqlite3.connect("users_database.db")
-    #cursor = conn.cursor()
+#conn = sqlite3.connect("users_database.db")
+#cursor = conn.cursor()
 
-    #cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
-    #filtered_profiles = cursor.fetchall()
+#cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
+#filtered_profiles = cursor.fetchall()
 
-    #conn.close()
+#conn.close()
 
-    #return filtered_profiles
+#return filtered_profiles
 
 
 #  функцию фильтрации для выбора соответствующих анкет.
@@ -353,4 +427,4 @@ cursor = conn.cursor()
 #filtered_profiles = filter_profiles(STATE_PROFILE)
 
 #for profile in filtered_profiles:
-    #print(profile)
+#print(profile)

@@ -14,11 +14,17 @@ def command_start(message, bot, database_manager, STATE_MAIN_SCREEN):
         button_text_start_searching = main_screen_data["button_text_start_searching"]
         button_text_profile = main_screen_data["button_text_profile"]
         button_text_about = main_screen_data["button_text_about"]
+        button_text_my_friends = main_screen_data["button_text_my_friends"]
 
         markup_main_buttons = types.InlineKeyboardMarkup()
         markup_main_buttons.row(
             types.InlineKeyboardButton(
                 button_text_start_searching, callback_data="start_searching"
+            )
+        )
+        markup_main_buttons.row(
+            types.InlineKeyboardButton(
+                button_text_my_friends, callback_data="show_friends"
             )
         )
         markup_main_buttons.add(
