@@ -27,11 +27,11 @@ def show_friends(call, bot, database_manager):
             friends_list_message += f"{friend['name']} - @{friend['username']}\n"
             markup.add(
                 types.InlineKeyboardButton(
-                    f"Посмотреть анкету {friend['name']}",
+                    f"🔍 {friend['name']}",
                     callback_data=f"view_friend_{friend['id']}"
                 ),
                 types.InlineKeyboardButton(
-                    f"Удалить из друзей {friend['name']}",
+                    f"❌ {friend['name']}",
                     callback_data=f"delete_friend_{friend['id']}"
                 )
             )
