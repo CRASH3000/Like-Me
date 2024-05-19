@@ -67,6 +67,7 @@ messages = {
         "button_text_start_searching": "🔍 Начать поиск 🔍",
         "button_text_profile": "🪪 Мой профиль",
         "button_text_about": "🗂 О Проекте",
+        "button_text_settings": "Настройки",
         "button_text_my_friends": "Мои друзья"
     },
     "about_project_message": {
@@ -84,5 +85,12 @@ messages = {
         "button_text_back": "Назад",
         "text_no_friends": "Здесь пока никого нет 🙁"
 
+    },
+    "filter_settings_message": {
+        "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
+        "text": "Настройки поиска\nВозраст - {age}\nГород - {city}",
+        "button_text_age": "Изменить поиск возраста",
+        "button_text_city": "Изменить поиск города",
+        "button_text_back": "Назад"
     }
 }
