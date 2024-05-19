@@ -411,10 +411,6 @@ def remove_friend(user_id, friend_id):
         conn.close()
 
 
-# Подключение к базе данных
-conn = sqlite3.connect("profiles.db")
-cursor = conn.cursor()
-
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
 #conn = sqlite3.connect("users_database.db")
