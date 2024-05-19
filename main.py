@@ -4,8 +4,7 @@ import database_manager
 import os
 from dotenv import load_dotenv
 from data_messages import messages
-from bot_logic import profile_editing, user_registration, start_bot
-
+from bot_logic import profile_editing, user_registration, start_bot, add_friends
 
 load_dotenv()
 
@@ -16,7 +15,6 @@ if API_TOKEN is None:
     print("Ошибка: Токен API не найден.")
 else:
     print("Токен API успешно загружен")
-
 
 USER_DATA = {}  # Словарь для хранения данных пользователей
 
@@ -138,7 +136,7 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-    in ["status_find_friends", "status_find_love", "status_just_chat"]
+                      in ["status_find_friends", "status_find_love", "status_just_chat"]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -184,7 +182,7 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -235,7 +233,7 @@ def edit_name_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-    == STATE_WAITING_FOR_PROFILE_UPDATE
+                         == STATE_WAITING_FOR_PROFILE_UPDATE
 )
 def update_name_callback(message):
     profile_editing.update_name(message)
@@ -253,7 +251,7 @@ def edit_descriptions_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-    == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
 )
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
@@ -269,7 +267,7 @@ def edit_status_callback(call):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-    in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
 )
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
@@ -283,7 +281,7 @@ def edit_city_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-    == STATE_WAITING_FOR_CITY_UPDATE
+                         == STATE_WAITING_FOR_CITY_UPDATE
 )
 def update_city_callback(message):
     profile_editing.update_city(message)
@@ -300,7 +298,7 @@ def edit_photo_callback(call):
 @bot.message_handler(
     content_types=["photo"],
     func=lambda message: get_state(message.from_user.id)
-    == STATE_WAITING_FOR_PHOTO_UPDATE,
+                         == STATE_WAITING_FOR_PHOTO_UPDATE,
 )
 def update_photo_callback(message):
     profile_editing.update_photo(message)
@@ -366,11 +364,17 @@ def main_screen(call):
     button_text_start_searching = main_screen_data["button_text_start_searching"]
     button_text_profile = main_screen_data["button_text_profile"]
     button_text_about = main_screen_data["button_text_about"]
+    button_text_my_friends = main_screen_data["button_text_my_friends"]
 
     markup_main_buttons = types.InlineKeyboardMarkup()
     markup_main_buttons.row(
         types.InlineKeyboardButton(
             button_text_start_searching, callback_data="start_searching"
+        )
+    )
+    markup_main_buttons.row(
+        types.InlineKeyboardButton(
+            button_text_my_friends, callback_data="show_friends"
         )
     )
     # С помощью метода .row() можно сделать одну большую кнопку
@@ -438,7 +442,7 @@ def start_searching(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Хотите познакомится?\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -491,7 +495,7 @@ def handle_like(call):
                 liked_user_id,
                 f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
             )
-            database_manager.remove_mutual_likes(user_id, liked_user_id)
+            database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)
 
     elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
         user_data = database_manager.get_user(user_id)
@@ -510,7 +514,7 @@ def handle_like(call):
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
                 reply_markup=reply_markup,
             )
 
@@ -535,7 +539,7 @@ def handle_like(call):
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -587,7 +591,7 @@ def notify_likes(user_id):
             chat_id=user_id,
             photo=liker_data[6],
             caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
-            f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+                    f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
             reply_markup=reply_markup,
         )
 
@@ -613,7 +617,7 @@ def handle_accept(call):
             f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
         )
 
-        database_manager.remove_mutual_likes(user_id, liked_user_id)
+        database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)
         bot.delete_message(
             chat_id=call.message.chat.id, message_id=call.message.message_id
         )
@@ -636,6 +640,21 @@ def send_temporary_confirmation(user_id, message_text):
 def handle_decline(call):
     # Удаляем сообщение с предложением
     bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "show_friends")
+def show_friends(call):
+    add_friends.show_friends(call, bot, database_manager)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("view_friend_"))
+def view_friends(call):
+    add_friends.view_friend(call, bot, database_manager)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delete_friend_"))
+def delete_friend(call):
+    add_friends.delete_friend(call, bot, database_manager)
 
 
 if __name__ == "__main__":

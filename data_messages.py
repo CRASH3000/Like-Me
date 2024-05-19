@@ -67,6 +67,7 @@ messages = {
         "button_text_start_searching": "🔍 Начать поиск 🔍",
         "button_text_profile": "🪪 Мой профиль",
         "button_text_about": "🗂 О Проекте",
+        "button_text_my_friends": "Мои друзья"
     },
     "about_project_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
@@ -77,4 +78,11 @@ messages = {
         "так что присоединяйся и наслаждайся общением! \n\nС любовью, команда 'КликЧат' ❤️",
         "button_text_back": "Назад",
     },
+    "my_friends_message": {
+        "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
+        "button_text_search": "Начать поиск собеседника",
+        "button_text_back": "Назад",
+        "text_no_friends": "Здесь пока никого нет 🙁"
+
+    }
 }
