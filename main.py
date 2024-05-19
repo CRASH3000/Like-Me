@@ -417,21 +417,23 @@ def about_project(call):
 @bot.callback_query_handler(func=lambda call: call.data == "start_searching")
 def start_searching(call):
     user_id = call.from_user.id
-    user_data = database_manager.get_next_profile(
-        user_id
+    user_data = database_manager.get_user(user_id)
+    user_status = user_data[5]
+    user_profile = database_manager.get_next_profile(
+        user_id, user_status
     )  # Получаем следующего пользователя из базы данных
     main_screen_data = messages["main_screen_message"]
     img_url = main_screen_data["image_url"]
     set_state(user_id, STATE_SEARCHING)
 
-    if user_data:
-        print(f"User data: {user_data[1]}")
+    if user_profile:
+        print(f"User data: {user_profile[1]}")
 
-        database_manager.mark_profile_as_viewed(user_id, user_data[0])
+        database_manager.mark_profile_as_viewed(user_id, user_profile[0])
 
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
-            types.InlineKeyboardButton("Да", callback_data=f"like_{user_data[0]}"),
+            types.InlineKeyboardButton("Да", callback_data=f"like_{user_profile[0]}"),
             types.InlineKeyboardButton("Нет", callback_data="next_profile"),
         )
         reply_markup.row(
@@ -440,17 +442,17 @@ def start_searching(call):
 
         bot.edit_message_media(
             media=types.InputMediaPhoto(
-                user_data[6],
-                caption=f"Хотите познакомится?\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                user_profile[6],
+                caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
+                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=reply_markup,
         )
     else:
-        markup = types.InlineKeyboardMarkup()
-        markup.add(
+        reply_markup = types.InlineKeyboardMarkup()
+        reply_markup.add(
             types.InlineKeyboardButton(
                 "Вернуться в главное меню", callback_data="go_to_main_menu"
             ),
@@ -462,7 +464,7 @@ def start_searching(call):
             media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            reply_markup=markup,
+            reply_markup=reply_markup,
         )
 
 
@@ -519,7 +521,9 @@ def handle_like(call):
             )
 
     try:
-        next_user_data = database_manager.get_next_profile(user_id)
+        user_data = database_manager.get_user(user_id)
+        user_status = user_data[5]
+        next_user_data = database_manager.get_next_profile(user_id, user_status)
 
         if next_user_data:
             reply_markup = types.InlineKeyboardMarkup()

@@ -1,6 +1,7 @@
 import sqlite3
 
-from main import STATE_SEARCHING, STATE_PROFILE
+from bot_logic import filters
+from main import STATE_SEARCHING
 
 
 # Подключение к базе данных (или ее создание, если она не существует)
@@ -280,7 +281,7 @@ def has_like(user_id, liked_user_id):
         conn.close()
 
 
-def get_next_profile(user_id):
+def get_next_profile(user_id, target_status):
     conn = get_connection()
     cursor = conn.cursor()
     try:
@@ -300,7 +301,7 @@ def get_next_profile(user_id):
             return get_user(queued_user_id)
 
         # Если в очереди нет профилей, ищем случайного пользователя
-        return get_random_user(user_id)
+        return filters.filter_users(user_id, target_status)
     finally:
         conn.close()
 
@@ -338,11 +339,16 @@ def remove_mutual_likes_and_add_friends(user_id, liked_user_id):
             "DELETE FROM likes WHERE (user_id=? AND liked_user_id=?) OR (user_id=? AND liked_user_id=?)",
             (user_id, liked_user_id, liked_user_id, user_id),
         )
-        # Добавление в друзья
+
         cursor.execute(
-            "INSERT INTO friends (user_id, friend_id) VALUES (?, ?), (?, ?)",
-            (user_id, liked_user_id, liked_user_id, user_id),
+            "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
+            (user_id, liked_user_id),
         )
+        cursor.execute(
+            "INSERT OR IGNORE INTO friends (user_id, friend_id) VALUES (?, ?)",
+            (liked_user_id, user_id),
+        )
+
         conn.commit()
     except Exception as e:
         print(f"Ошибка при удалении взаимных лайков и добавлении друзей: {e}")
@@ -404,10 +410,6 @@ def remove_friend(user_id, friend_id):
     finally:
         conn.close()
 
-
-# Подключение к базе данных
-conn = sqlite3.connect("profiles.db")
-cursor = conn.cursor()
 
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
