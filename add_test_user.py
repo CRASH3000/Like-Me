@@ -12,7 +12,7 @@ test_user = [
         "Найти друзей",
         "https://upload.wikimedia.org/wikipedia/ru/thumb/8/84/Ned_Flanders.png/220px-Ned_Flanders.png",
         "Мужчина",
-        "ned_flanders",
+        "ned_flanders", 
         None,
     ),
     (
