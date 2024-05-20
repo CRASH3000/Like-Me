@@ -212,24 +212,67 @@ def has_like(user_id, liked_user_id):
         conn.close()
 
 
-def get_next_profile(user_id):
+def get_next_profile(user_id, target_status):
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        age_filter = get_age_filter(user_id)
+        city_filter = get_city_filter(user_id)
+
+        age_conditions = ""
+        city_conditions = ""
+        params = [user_id, user_id, user_id, target_status]
+
+        if age_filter != "по умолчанию":
+            if '-' in age_filter:
+                age_range = age_filter.split('-')
+                age_conditions = "AND age BETWEEN ? AND ?"
+                params.extend([int(age_range[0]), int(age_range[1])])
+            else:
+                age_conditions = "AND age = ?"
+                params.append(int(age_filter))
+
+        if city_filter != "по умолчанию":
+            city_conditions = "AND city = ?"
+            params.append(city_filter)
+
         # Проверка наличия профилей в очереди
-        cursor.execute("SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1", (user_id,))
+        cursor.execute(
+            "SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1",
+            (user_id,),
+        )
         queued_user = cursor.fetchone()
         if queued_user:
             queued_user_id = queued_user[0]
-            cursor.execute("DELETE FROM queued_profiles WHERE user_id=? AND queued_user_id=?",
-                           (user_id, queued_user_id))
+            cursor.execute(
+                "DELETE FROM queued_profiles WHERE user_id=? AND queued_user_id=?",
+                (user_id, queued_user_id),
+            )
             conn.commit()
             return get_user(queued_user_id)
 
         # Если в очереди нет профилей, ищем случайного пользователя
-        return get_random_user(user_id)
+        query = f"""
+            SELECT * FROM users 
+            WHERE id NOT IN (
+                SELECT viewed_user_id FROM viewed_profiles WHERE user_id=?
+            )
+            AND id NOT IN (
+                SELECT friend_id FROM friends WHERE user_id=?
+            )
+            AND id != ?
+            AND status = ?
+            {age_conditions}
+            {city_conditions}
+            ORDER BY RANDOM() 
+            LIMIT 1
+        """
+        cursor.execute(query, params)
+        user_data = cursor.fetchone()
+        return user_data
     finally:
         conn.close()
+
 
 
 # Удаление пользователя из базы данных
@@ -292,3 +335,62 @@ filtered_profiles = filter_profiles(STATE_PROFILE)
 
 for profile in filtered_profiles:
     print(profile)
+
+    def set_state(user_id, state):
+        conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET state=? WHERE id=?", (state, user_id))
+    conn.commit()
+    conn.close()
+
+def get_user_state(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT state FROM users WHERE id=?", (user_id,))
+    state = cursor.fetchone()
+    conn.close()
+    return state[0] if state else None
+
+def set_age_filter(user_id, age_filter):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE users SET age_filter=? WHERE id=?", (age_filter, user_id)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+def get_age_filter(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT age_filter FROM users WHERE id=?", (user_id,))
+        age_filter = cursor.fetchone()
+        return age_filter[0] if age_filter and age_filter[0] else "по умолчанию"
+    finally:
+        conn.close()
+
+def set_city_filter(user_id, city_filter):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE users SET city_filter=? WHERE id=?", (city_filter, user_id)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+def get_city_filter(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT city_filter FROM users WHERE id=?", (user_id,))
+    city_filter = cursor.fetchone()
+    conn.close()
+    return city_filter[0] if city_filter and city_filter[0] else "по умолчанию"
