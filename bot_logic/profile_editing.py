@@ -17,20 +17,23 @@ def send_profile_edit_message(message, bot, chat_id, set_state, STATE_EDIT_PROFI
     button_photo = "Фото"
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text_edit_name, callback_data='show_name'),
-               types.InlineKeyboardButton(button_des, callback_data='edit_descriptions'),
-               types.InlineKeyboardButton(button_status, callback_data='edit_status'),
-               types.InlineKeyboardButton(button_city, callback_data='edit_city'),
-               types.InlineKeyboardButton(button_photo, callback_data='edit_photo')
-               )
-    markup.row(types.InlineKeyboardButton(button_text_back, callback_data='show_profile'))
+    markup.add(
+        types.InlineKeyboardButton(button_text_edit_name, callback_data="show_name"),
+        types.InlineKeyboardButton(button_des, callback_data="edit_descriptions"),
+        types.InlineKeyboardButton(button_status, callback_data="edit_status"),
+        types.InlineKeyboardButton(button_city, callback_data="edit_city"),
+        types.InlineKeyboardButton(button_photo, callback_data="edit_photo"),
+    )
+    markup.row(
+        types.InlineKeyboardButton(button_text_back, callback_data="show_profile")
+    )
 
     bot.send_photo(
         chat_id,
         photo=image_url,
         caption=message_text,
         parse_mode="HTML",
-        reply_markup=markup
+        reply_markup=markup,
     )
 
 
@@ -68,10 +71,14 @@ def update_descriptions(message):
     database_manager.update_user(user_id, descriptions=descriptions)
 
 
-def update_descriptions_complete(message, bot, set_state, STATUS_DESCRIPTIONS_UPDATE_COMPLETE):
+def update_descriptions_complete(
+    message, bot, set_state, STATUS_DESCRIPTIONS_UPDATE_COMPLETE
+):
     set_state(message.chat.id, STATUS_DESCRIPTIONS_UPDATE_COMPLETE)
     update_descriptions(message)
-    send_profile_edit_message(message, bot, set_state, STATUS_DESCRIPTIONS_UPDATE_COMPLETE)
+    send_profile_edit_message(
+        message, bot, set_state, STATUS_DESCRIPTIONS_UPDATE_COMPLETE
+    )
 
 
 def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
@@ -86,13 +93,20 @@ def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
 
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
-        types.InlineKeyboardButton(button_status_1, callback_data="status_find_friends_1"),
-        types.InlineKeyboardButton(button_status_2, callback_data='status_find_love_2'),
-        types.InlineKeyboardButton(button_status_3, callback_data='status_just_chat_3')
+        types.InlineKeyboardButton(
+            button_status_1, callback_data="status_find_friends_1"
+        ),
+        types.InlineKeyboardButton(button_status_2, callback_data="status_find_love_2"),
+        types.InlineKeyboardButton(button_status_3, callback_data="status_just_chat_3"),
     ]
     for button in buttons:
         markup_status.add(button)
-    bot.send_message(call.message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML")
+    bot.send_message(
+        call.message.chat.id,
+        message_text,
+        reply_markup=markup_status,
+        parse_mode="HTML",
+    )
 
 
 def update_status_text(callback_data):
@@ -110,7 +124,9 @@ def update_status_complete(call, bot, set_state, STATUS_UPDATE_COMPLETE):
     status_text = update_status_text(call.data)
     database_manager.update_user(user_id, status=status_text)
     set_state(call.message.chat.id, STATUS_UPDATE_COMPLETE)
-    send_profile_edit_message(call, bot, call.message.chat.id, set_state, STATUS_UPDATE_COMPLETE)
+    send_profile_edit_message(
+        call, bot, call.message.chat.id, set_state, STATUS_UPDATE_COMPLETE
+    )
 
 
 def edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE):

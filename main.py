@@ -4,7 +4,7 @@ import database_manager
 import os
 from dotenv import load_dotenv
 from data_messages import messages
-from bot_logic import profile_editing
+from bot_logic import profile_editing, user_registration, start_bot, add_friends
 
 load_dotenv()
 
@@ -15,7 +15,6 @@ if API_TOKEN is None:
     print("Ошибка: Токен API не найден.")
 else:
     print("Токен API успешно загружен")
-
 
 USER_DATA = {}  # Словарь для хранения данных пользователей
 
@@ -47,11 +46,6 @@ STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
 STATE_SEARCHING = 27
-STATE_FILTER_SETTINGS = 28
-STATE_CHANGE_AGE_FILTER = 29
-STATE_CHANGE_CITY_FILTER = 30
-
-
 
 
 # Функция для обновления состояния пользователя
@@ -71,229 +65,128 @@ def get_state(user_id):
 
 
 # Старт регистрации
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=["start"])
 def send_welcome(message):
     start_bot.command_start(message, bot, database_manager, STATE_MAIN_SCREEN)
 
 
 # Обработчик для кнопки регистрации
-@bot.callback_query_handler(func=lambda call: call.data == 'register')
-def age_request(call):
-    user_id = call.from_user.id
-
-    # Создаем пользователя с начальным состоянием в БД
-    database_manager.add_user(user_id=user_id, state=STATE_ASK_AGE)
-    set_state(user_id, STATE_ASK_AGE)
-
-    age_request_text = messages["age_request_message"]["text"]
-    bot.send_message(call.message.chat.id, age_request_text, parse_mode="HTML")
+@bot.callback_query_handler(func=lambda call: call.data == "register")
+def ask_age(call):
+    user_registration.age_request(call, bot, database_manager, STATE_ASK_AGE)
 
 
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE)
-def age_input(message):
-    user_id = message.from_user.id
-    if len(message.text) > 3:
-        error_text = messages["age_input_message"]["error_text_age_over_110"]
-        bot.send_message(message.chat.id, error_text)
-        return
-
-    try:
-        age = int(message.text)
-        if age < 1 or age > 110:
-            error_text = messages["age_input_message"]["error_text_age_over_110"]
-            bot.send_message(message.chat.id, error_text)
-        elif age < 16:
-            error_text = messages["age_input_message"]["error_text_age_under_16"]
-            bot.send_message(message.chat.id, error_text)
-            database_manager.delete_user(user_id)  # Удаление пользователя из БД
-            set_state(user_id, None)
-        else:
-            # Добавляем возраст пользователя в БД
-            database_manager.update_user(user_id, age=age)
-            set_state(user_id, STATE_ASK_CONSENT)
-            consent_text = messages["age_input_message"]["text_consent_messages"]
-            button_yes = messages["age_input_message"]["button_text_yes"]
-            button_no = messages["age_input_message"]["button_text_no"]
-
-            markup = types.InlineKeyboardMarkup()
-            markup.add(types.InlineKeyboardButton(button_yes,
-                                                  callback_data="consent_yes"),
-                       types.InlineKeyboardButton(button_no,
-                                                  callback_data="consent_no"))
-            bot.send_message(message.chat.id, consent_text, reply_markup=markup, parse_mode="HTML")
-    except ValueError:
-        error_text = messages["age_input_message"]["error_text_invalid_data_type"]
-        bot.send_message(message.chat.id, error_text, parse_mode="HTML")
-
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE
+)
+def ask_age(message):
+    user_registration.age_input(
+        message, bot, database_manager, set_state, STATE_ASK_CONSENT
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "consent_yes")
 def consent_yes(call):
-    user_id = call.from_user.id
-    telegram_username = call.from_user.username
-    database_manager.update_user(user_id, telegram_username=telegram_username)
-
-    set_state(user_id, STATE_ENTER_NAME)
-    text_yes = messages["consent_yes_message"]["text"]
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=text_yes, reply_markup=None)  # Удаляем клавиатуру
+    user_registration.button_yes(
+        call, bot, database_manager, set_state, STATE_ENTER_NAME
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "consent_no")
 def consent_no(call):
-    user_id = call.from_user.id
-    database_manager.delete_user(user_id)  # Удаляем пользователя из БД
-    set_state(user_id, None)
-
-    text_no = messages["consent_no_message"]["text"]
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=text_no, reply_markup=None)
+    user_registration.button_no(call, bot, database_manager, set_state)
 
 
 # Обработчик текстовых сообщений для регистрации
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_NAME)
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id) == STATE_ENTER_NAME
+)
 def ask_gender(message):
-    user_id = message.from_user.id
-    name = message.text
-    database_manager.update_user(user_id, name=name)
-    set_state(user_id, STATE_ENTER_GENDER)
-
-    text_message = messages["ask_gender_message"]["text"]
-    button_male = messages["ask_gender_message"]["button_text_male"]
-    button_female = messages["ask_gender_message"]["button_text_female"]
-
-    markup_gender = types.InlineKeyboardMarkup()
-    buttons = [
-        types.InlineKeyboardButton(button_male, callback_data="gender_male"),
-        types.InlineKeyboardButton(button_female, callback_data='gender_female'),
-    ]
-    for button in buttons:
-        markup_gender.add(button)
-    bot.send_message(message.chat.id, text_message, reply_markup=markup_gender, parse_mode="HTML")
-
-
-def get_gender_text(callback_data):
-    statuses = {
-        "gender_male": "Мужчина",
-        "gender_female": "Женщина",
-    }
-    return statuses.get(callback_data, "Неизвестный пол")
-
-
-@bot.callback_query_handler(func=lambda call: call.data in ["gender_male", "gender_female"])
-def ask_city(call):
-    user_id = call.from_user.id
-    gender_text = get_gender_text(call.data)
-    database_manager.update_user(user_id, gender=gender_text)
-    set_state(user_id, STATE_ENTER_CITY)
-
-    message_text = messages["ask_city_message"]["text"]
-    bot.answer_callback_query(call.id)  # подтверждение получения callback
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=message_text, reply_markup=None)
-
-
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_ENTER_CITY)
-def ask_descriptions(message):
-    user_id = message.from_user.id
-    city = message.text
-    database_manager.update_user(user_id, city=city)
-    set_state(message.from_user.id, STATE_DESCRIPTIONS)
-
-    message_text = messages["ask_descriptions_message"]["text"]
-    bot.send_message(message.chat.id, message_text, parse_mode="HTML")
-
-
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS)
-def ask_status(message):
-    user_id = message.from_user.id
-    descriptions = message.text
-    database_manager.update_user(user_id, descriptions=descriptions)
-    set_state(message.from_user.id, STATE_CHOOSE_STATUS)
-
-    ask_status_data = messages["ask_status_message"]
-    message_text = ask_status_data["text"]
-    button_status_1 = ask_status_data["button_text_status_1"]
-    button_status_2 = ask_status_data["button_text_status_2"]
-    button_status_3 = ask_status_data["button_text_status_3"]
-
-    markup_status = types.InlineKeyboardMarkup()
-    buttons = [
-        types.InlineKeyboardButton(button_status_1, callback_data="status_find_friends"),
-        types.InlineKeyboardButton(button_status_2, callback_data='status_find_love'),
-        types.InlineKeyboardButton(button_status_3, callback_data='status_just_chat')
-    ]
-    for button in buttons:
-        markup_status.add(button)
-    bot.send_message(message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML")
-
-
-def get_status_text(callback_data):
-    statuses = {
-        "status_find_friends": "Найти друзей",
-        "status_find_love": "Найти вторую половинку",
-        "status_just_chat": "Просто пообщаться",
-    }
-    # Получаем ключ статуса (например, 'find_friends') и возвращаем соответствующий текст
-    return statuses.get(callback_data, "Неизвестный статус")
+    user_registration.gender_request(
+        message, bot, database_manager, set_state, STATE_ENTER_GENDER
+    )
 
 
 @bot.callback_query_handler(
-    func=lambda call: call.data in ["status_find_friends", "status_find_love", "status_just_chat"])
+    func=lambda call: call.data in ["gender_male", "gender_female"]
+)
+def ask_city(call):
+    user_registration.city_request(
+        call, bot, database_manager, set_state, STATE_ENTER_CITY
+    )
+
+
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id) == STATE_ENTER_CITY
+)
+def ask_descriptions(message):
+    user_registration.descriptions_request(
+        message, bot, database_manager, set_state, STATE_DESCRIPTIONS
+    )
+
+
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS
+)
+def ask_status(message):
+    user_registration.status_selection(
+        message, bot, database_manager, set_state, STATE_CHOOSE_STATUS
+    )
+
+
+@bot.callback_query_handler(
+    func=lambda call: call.data
+                      in ["status_find_friends", "status_find_love", "status_just_chat"]
+)
 def ask_photo(call):
-    user_id = call.from_user.id
-    status_text = get_status_text(call.data)
-    database_manager.update_user(user_id, status=status_text)
-    set_state(user_id, STATE_UPLOAD_PHOTO)
-
-    message_text = messages["ask_photo_message"]["text"]
-    bot.answer_callback_query(call.id)  # подтверждение получения callback
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=message_text, reply_markup=None)
+    user_registration.sending_photo(
+        call, bot, database_manager, set_state, STATE_UPLOAD_PHOTO
+    )
 
 
-@bot.message_handler(content_types=['photo'],
-                     func=lambda message: get_state(message.from_user.id) == STATE_UPLOAD_PHOTO)
+@bot.message_handler(
+    content_types=["photo"],
+    func=lambda message: get_state(message.from_user.id) == STATE_UPLOAD_PHOTO,
+)
 def photo_and_final_register(message):
-    user_id = message.from_user.id
-    photo_id = message.photo[-1].file_id  # Получаем file_id самой большой версии фото
-    database_manager.update_user(user_id, photo=photo_id)  # Обновляем профиль пользователя в базе данных с новым фото
-    set_state(user_id, STATE_CREATE_PROFILE)
-
-    photo_and_final_register_data = messages["photo_and_final_register_message"]
-    img_url = photo_and_final_register_data["image_url"]
-    message_text = photo_and_final_register_data["text"]
-    button = photo_and_final_register_data["button_text"]
-    markup = types.InlineKeyboardMarkup()
-    reg_button = types.InlineKeyboardButton(button, callback_data='show_profile')
-    markup.add(reg_button)
-    bot.send_photo(message.chat.id, img_url, caption=message_text, reply_markup=markup, parse_mode="HTML")
+    user_registration.final_request(
+        message, bot, database_manager, set_state, STATE_CREATE_PROFILE
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "show_profile")
 def show_profile(call):
     user_id = call.from_user.id
-    user_data = database_manager.get_user(user_id)  # Получаем данные пользователя из базы данных
+    user_data = database_manager.get_user(
+        user_id
+    )  # Получаем данные пользователя из базы данных
     set_state(user_id, STATE_PROFILE)
 
     if user_data:
         reply_markup = types.InlineKeyboardMarkup()
-        reply_markup.row(types.InlineKeyboardButton("Ок, перейти в главное меню", callback_data="go_to_main_menu"))
+        reply_markup.row(
+            types.InlineKeyboardButton(
+                "Ок, перейти в главное меню", callback_data="go_to_main_menu"
+            )
+        )
         reply_markup.add(
-            types.InlineKeyboardButton("Редактировать профиль", callback_data="edit_profile"),
-            types.InlineKeyboardButton("Удалить профиль", callback_data="delete_profile")
+            types.InlineKeyboardButton(
+                "Редактировать профиль", callback_data="edit_profile"
+            ),
+            types.InlineKeyboardButton(
+                "Удалить профиль", callback_data="delete_profile"
+            ),
         )
 
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
+                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            reply_markup=reply_markup
-
+            reply_markup=reply_markup,
         )
     else:
         bot.send_message(call.message.chat.id, "Ошибка при получении данных профиля.")
@@ -314,20 +207,22 @@ def edit_profile(call):
     button_photo = "Фото"
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text_edit_name, callback_data='edit_name'),
-               types.InlineKeyboardButton(button_des, callback_data='edit_descriptions'),
-               types.InlineKeyboardButton(button_status, callback_data='edit_status'),
-               types.InlineKeyboardButton(button_city, callback_data='edit_city'),
-               types.InlineKeyboardButton(button_photo, callback_data='edit_photo')
-               )
-    markup.row(types.InlineKeyboardButton(button_text_back, callback_data='show_profile'))
+    markup.add(
+        types.InlineKeyboardButton(button_text_edit_name, callback_data="edit_name"),
+        types.InlineKeyboardButton(button_des, callback_data="edit_descriptions"),
+        types.InlineKeyboardButton(button_status, callback_data="edit_status"),
+        types.InlineKeyboardButton(button_city, callback_data="edit_city"),
+        types.InlineKeyboardButton(button_photo, callback_data="edit_photo"),
+    )
+    markup.row(
+        types.InlineKeyboardButton(button_text_back, callback_data="show_profile")
+    )
 
     bot.edit_message_media(
         media=types.InputMediaPhoto(image_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
-        reply_markup=markup
-
+        reply_markup=markup,
     )
 
 
@@ -336,21 +231,33 @@ def edit_name_callback(call):
     profile_editing.edit_name(call, bot, set_state, STATE_WAITING_FOR_PROFILE_UPDATE)
 
 
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_PROFILE_UPDATE)
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id)
+                         == STATE_WAITING_FOR_PROFILE_UPDATE
+)
 def update_name_callback(message):
     profile_editing.update_name(message)
-    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
+    profile_editing.send_profile_edit_message(
+        message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "edit_descriptions")
 def edit_descriptions_callback(call):
-    profile_editing.edit_descriptions(call, bot, set_state, STATE_WAITING_FOR_DESCRIPTIONS_UPDATE)
+    profile_editing.edit_descriptions(
+        call, bot, set_state, STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+    )
 
 
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE)
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id)
+                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+)
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
-    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
+    profile_editing.send_profile_edit_message(
+        message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "edit_status")
@@ -358,7 +265,10 @@ def edit_status_callback(call):
     profile_editing.edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE)
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"])
+@bot.callback_query_handler(
+    func=lambda call: call.data
+                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+)
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
     profile_editing.update_status_complete(call, bot, set_state, STATE_EDIT_PROFILE)
@@ -369,10 +279,15 @@ def edit_city_callback(call):
     profile_editing.edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE)
 
 
-@bot.message_handler(func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_CITY_UPDATE)
+@bot.message_handler(
+    func=lambda message: get_state(message.from_user.id)
+                         == STATE_WAITING_FOR_CITY_UPDATE
+)
 def update_city_callback(message):
     profile_editing.update_city(message)
-    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
+    profile_editing.send_profile_edit_message(
+        message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "edit_photo")
@@ -380,11 +295,16 @@ def edit_photo_callback(call):
     profile_editing.edit_photo(call, bot, set_state, STATE_WAITING_FOR_PHOTO_UPDATE)
 
 
-@bot.message_handler(content_types=['photo'],
-                     func=lambda message: get_state(message.from_user.id) == STATE_WAITING_FOR_PHOTO_UPDATE)
+@bot.message_handler(
+    content_types=["photo"],
+    func=lambda message: get_state(message.from_user.id)
+                         == STATE_WAITING_FOR_PHOTO_UPDATE,
+)
 def update_photo_callback(message):
     profile_editing.update_photo(message)
-    profile_editing.send_profile_edit_message(message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE)
+    profile_editing.send_profile_edit_message(
+        message, bot, message.chat.id, set_state, STATE_EDIT_PROFILE
+    )
 
 
 @bot.callback_query_handler(func=lambda call: call.data == "delete_profile")
@@ -398,14 +318,18 @@ def confirm_delete_profile(call):
     button_text_cancel = confirm_delete_profile_data["button_text_cancel"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text_confirm, callback_data="confirm_delete_profile"),
-               types.InlineKeyboardButton(button_text_cancel, callback_data="show_profile"))
+    markup.add(
+        types.InlineKeyboardButton(
+            button_text_confirm, callback_data="confirm_delete_profile"
+        ),
+        types.InlineKeyboardButton(button_text_cancel, callback_data="show_profile"),
+    )
 
     bot.edit_message_media(
         media=types.InputMediaPhoto(image_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
-        reply_markup=markup
+        reply_markup=markup,
     )
 
 
@@ -440,7 +364,6 @@ def main_screen(call):
     button_text_start_searching = main_screen_data["button_text_start_searching"]
     button_text_profile = main_screen_data["button_text_profile"]
     button_text_about = main_screen_data["button_text_about"]
-    button_text_settings = main_screen_data["button_text_settings"]
     button_text_my_friends = main_screen_data["button_text_my_friends"]
 
     markup_main_buttons = types.InlineKeyboardMarkup()
@@ -454,13 +377,6 @@ def main_screen(call):
             button_text_my_friends, callback_data="show_friends"
         )
     )
-
-    markup_main_buttons.row(
-        types.InlineKeyboardButton(
-            button_text_settings, callback_data="filter_settings"
-        )
-    )
-
     # С помощью метода .row() можно сделать одну большую кнопку
 
     markup_main_buttons.add(
@@ -477,8 +393,7 @@ def main_screen(call):
     )
 
 
-
-@bot.callback_query_handler(func=lambda call: call.data == 'about_project')
+@bot.callback_query_handler(func=lambda call: call.data == "about_project")
 def about_project(call):
     print("Handling about_project callback...")
     set_state(call.from_user.id, STATE_ABOUT_PROJECT)
@@ -489,65 +404,80 @@ def about_project(call):
     button_text = about_project_data["button_text_back"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text, callback_data='go_to_main_menu'))
-    bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
-                           chat_id=call.message.chat.id,
-                           message_id=call.message.message_id,
-                           reply_markup=markup)
+    markup.add(types.InlineKeyboardButton(button_text, callback_data="go_to_main_menu"))
+    bot.edit_message_media(
+        media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=markup,
+    )
 
 
 # Обработчик для кнопки "Начать поиск"
-@bot.callback_query_handler(func=lambda call: call.data == 'start_searching')
+@bot.callback_query_handler(func=lambda call: call.data == "start_searching")
 def start_searching(call):
     user_id = call.from_user.id
-    user_data = database_manager.get_next_profile(user_id)  # Получаем следующего пользователя из базы данных
+    user_data = database_manager.get_user(user_id)
+    user_status = user_data[5]
+    user_profile = database_manager.get_next_profile(
+        user_id, user_status
+    )  # Получаем следующего пользователя из базы данных
     main_screen_data = messages["main_screen_message"]
     img_url = main_screen_data["image_url"]
     set_state(user_id, STATE_SEARCHING)
 
-    if user_data:
-        print(f"User data: {user_data[1]}")
+    if user_profile:
+        print(f"User data: {user_profile[1]}")
 
-        database_manager.mark_profile_as_viewed(user_id, user_data[0])
+        database_manager.mark_profile_as_viewed(user_id, user_profile[0])
 
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
-            types.InlineKeyboardButton("Да", callback_data=f"like_{user_data[0]}"),
-            types.InlineKeyboardButton("Нет", callback_data="next_profile")
+            types.InlineKeyboardButton("Да", callback_data=f"like_{user_profile[0]}"),
+            types.InlineKeyboardButton("Нет", callback_data="next_profile"),
         )
-        reply_markup.row(types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
-                         )
+        reply_markup.row(
+            types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
+        )
 
         bot.edit_message_media(
-            media=types.InputMediaPhoto(user_data[6],
-                                        caption=f"Хотите познакомится?\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                                                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"),
+            media=types.InputMediaPhoto(
+                user_profile[6],
+                caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
+                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
+            ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
     else:
-        markup = types.InlineKeyboardMarkup()
-        markup.add(
-            types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
-            types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
+        reply_markup = types.InlineKeyboardMarkup()
+        reply_markup.add(
+            types.InlineKeyboardButton(
+                "Вернуться в главное меню", callback_data="go_to_main_menu"
+            ),
+            types.InlineKeyboardButton(
+                "Просмотреть анкеты заново", callback_data="restart_searching"
+            ),
         )
-        bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
-                               chat_id=call.message.chat.id,
-                                message_id=call.message.message_id,
-                                reply_markup=markup)
+        bot.edit_message_media(
+            media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            reply_markup=reply_markup,
+        )
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'next_profile')
+@bot.callback_query_handler(func=lambda call: call.data == "next_profile")
 def no_search_profile(call):
     start_searching(call)
 
 
 # Обработчик для кнопки "Да"
-@bot.callback_query_handler(func=lambda call: call.data.startswith('like_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("like_"))
 def handle_like(call):
     user_id = call.from_user.id
-    liked_user_id = int(call.data.split('_')[1])
+    liked_user_id = int(call.data.split("_")[1])
     main_screen_data = messages["main_screen_message"]
     img_url = main_screen_data["image_url"]
 
@@ -558,64 +488,92 @@ def handle_like(call):
         user_data = database_manager.get_user(user_id)
         liked_user_data = database_manager.get_user(liked_user_id)
         if user_data and liked_user_data:
-            send_temporary_confirmation(user_id,
-                                        f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. "
-                                        f"Начните общение: @{liked_user_data[9]}")
-            send_temporary_confirmation(liked_user_id,
-                                        f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
-            database_manager.remove_mutual_likes(user_id, liked_user_id)
+            send_temporary_confirmation(
+                user_id,
+                f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. "
+                f"Начните общение: @{liked_user_data[9]}",
+            )
+            send_temporary_confirmation(
+                liked_user_id,
+                f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
+            )
+            database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)
 
     elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
         user_data = database_manager.get_user(user_id)
         if user_data:
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
-                types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liked_user_id}"))
-            reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="decline_"))
+                types.InlineKeyboardButton(
+                    "Лайкнуть в ответ",
+                    callback_data=f"accept_{user_id}_{liked_user_id}",
+                )
+            )
+            reply_markup.add(
+                types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+            )
             bot.send_photo(
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
                         f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
             )
 
     try:
-        next_user_data = database_manager.get_next_profile(user_id)
+        user_data = database_manager.get_user(user_id)
+        user_status = user_data[5]
+        next_user_data = database_manager.get_next_profile(user_id, user_status)
 
         if next_user_data:
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
-                types.InlineKeyboardButton("Да", callback_data=f"like_{next_user_data[0]}"),
-                types.InlineKeyboardButton("Нет", callback_data="next_profile")
+                types.InlineKeyboardButton(
+                    "Да", callback_data=f"like_{next_user_data[0]}"
+                ),
+                types.InlineKeyboardButton("Нет", callback_data="next_profile"),
             )
-            reply_markup.row(types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu"))
+            reply_markup.row(
+                types.InlineKeyboardButton(
+                    "Все, хватит", callback_data="go_to_main_menu"
+                )
+            )
 
             bot.edit_message_media(
-                media=types.InputMediaPhoto(next_user_data[6],
-                                            caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                                                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"),
+                media=types.InputMediaPhoto(
+                    next_user_data[6],
+                    caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
+                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
             )
         else:
             markup = types.InlineKeyboardMarkup()
             markup.add(
-                types.InlineKeyboardButton("Вернуться в главное меню", callback_data="go_to_main_menu"),
-                types.InlineKeyboardButton("Просмотреть анкеты заново", callback_data="restart_searching")
+                types.InlineKeyboardButton(
+                    "Вернуться в главное меню", callback_data="go_to_main_menu"
+                ),
+                types.InlineKeyboardButton(
+                    "Просмотреть анкеты заново", callback_data="restart_searching"
+                ),
             )
-            bot.edit_message_media(media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
-                                   chat_id=call.message.chat.id,
-                                   message_id=call.message.message_id,
-                                   reply_markup=markup)
+            bot.edit_message_media(
+                media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=markup,
+            )
     except Exception as e:
         print(f"Error: {e}")
         bot.send_message(user_id, "Произошла ошибка при поиске следующего профиля.")
 
 
 def check_mutual_like(user_id, liked_user_id):
-    return database_manager.has_like(user_id, liked_user_id) and database_manager.has_like(liked_user_id, user_id)
+    return database_manager.has_like(
+        user_id, liked_user_id
+    ) and database_manager.has_like(liked_user_id, user_id)
 
 
 def notify_likes(user_id):
@@ -624,23 +582,28 @@ def notify_likes(user_id):
         liker_data = database_manager.get_user(liker_id)
 
         reply_markup = types.InlineKeyboardMarkup()
-        reply_markup.add(types.InlineKeyboardButton("Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"))
-        reply_markup.add(types.InlineKeyboardButton("Неинтересно", callback_data="decline_"))
+        reply_markup.add(
+            types.InlineKeyboardButton(
+                "Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"
+            )
+        )
+        reply_markup.add(
+            types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+        )
 
         bot.send_photo(
             chat_id=user_id,
             photo=liker_data[6],
             caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
                     f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
-            reply_markup=reply_markup
+            reply_markup=reply_markup,
         )
 
 
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('accept_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("accept_"))
 def handle_accept(call):
     # Разделение callback_data для получения ID пользователя и ID лайкнутого пользователя
-    _, user_id, liked_user_id = call.data.split('_')
+    _, user_id, liked_user_id = call.data.split("_")
     user_id = int(user_id)
     liked_user_id = int(liked_user_id)
 
@@ -649,16 +612,22 @@ def handle_accept(call):
     liked_user_data = database_manager.get_user(liked_user_id)
 
     if user_data and liked_user_data:
-        send_temporary_confirmation(user_id,
-                                    f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}")
-        send_temporary_confirmation(liked_user_id,
-                                    f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}")
+        send_temporary_confirmation(
+            user_id,
+            f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}",
+        )
+        send_temporary_confirmation(
+            liked_user_id,
+            f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
+        )
 
-        database_manager.remove_mutual_likes(user_id, liked_user_id)
-        bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+        database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)
+        bot.delete_message(
+            chat_id=call.message.chat.id, message_id=call.message.message_id
+        )
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'restart_searching')
+@bot.callback_query_handler(func=lambda call: call.data == "restart_searching")
 def restart_searching(call):
     user_id = call.from_user.id
     database_manager.reset_viewed_profiles(user_id)
@@ -667,151 +636,32 @@ def restart_searching(call):
 
 def send_temporary_confirmation(user_id, message_text):
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("ОК", callback_data='decline_'))
+    markup.add(types.InlineKeyboardButton("ОК", callback_data="decline_"))
     bot.send_message(user_id, message_text, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('decline_'))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("decline_"))
 def handle_decline(call):
     # Удаляем сообщение с предложением
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
-if __name__ == '__main__':
+@bot.callback_query_handler(func=lambda call: call.data == "show_friends")
+def show_friends(call):
+    add_friends.show_friends(call, bot, database_manager)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("view_friend_"))
+def view_friends(call):
+    add_friends.view_friend(call, bot, database_manager)
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("delete_friend_"))
+def delete_friend(call):
+    add_friends.delete_friend(call, bot, database_manager)
+
+
+if __name__ == "__main__":
     database_manager.create_table()
     print("Бот запущен")
     bot.polling(none_stop=True)
-
-# Обработчик для кнопки "Настройки"
-@bot.callback_query_handler(func=lambda call: call.data == "filter_settings")
-def filter_settings(call):
-    user_id = call.from_user.id
-    database_manager.set_state(user_id, STATE_FILTER_SETTINGS)
-
-    filter_settings_data = messages["filter_settings_message"]
-    img_url = filter_settings_data["image_url"]
-    message_text = filter_settings_data["text"].format(
-        age=database_manager.get_age_filter(user_id),
-        city=database_manager.get_city_filter(user_id)
-    )
-    button_text_age = filter_settings_data["button_text_age"]
-    button_text_city = filter_settings_data["button_text_city"]
-    button_text_back = filter_settings_data["button_text_back"]
-    button_text_reset = "Сброс настроек"
-
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter"))
-    markup.add(types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter"))
-    markup.add(types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu"))
-    markup.add(types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings"))
-
-    bot.edit_message_media(
-        media=types.InputMediaPhoto(img_url, caption=message_text),
-        chat_id=call.message.chat.id,
-        message_id=call.message.message_id,
-        reply_markup=markup
-    )
-
-
-# Обработчик для кнопки "Изменить поиск возраста"
-@bot.callback_query_handler(func=lambda call: call.data == "change_age_filter")
-def change_age_filter(call):
-    user_id = call.from_user.id
-    database_manager.set_state(user_id, STATE_CHANGE_AGE_FILTER)
-    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-    bot.send_message(user_id,
-                     "Уточните возраст собеседника для поиска. Вы можете искать людей одного возраста написав например 20 или указать возрастной лимит, например 20 - 30")
-
-
-@bot.message_handler(
-    func=lambda message: database_manager.get_user_state(message.from_user.id) == STATE_CHANGE_AGE_FILTER)
-def set_age_filter_handler(message):
-    user_id = message.from_user.id
-    age_input = message.text.strip()
-
-    if validate_age_input(age_input):
-        database_manager.set_age_filter(user_id, age_input)
-        bot.send_message(user_id, f"Возрастной фильтр установлен: {age_input}")
-        show_filter_settings(message)
-    else:
-        bot.send_message(user_id, "Некорректный формат. Укажите возраст в формате '20' или '20 - 30'.")
-
-
-# Обработчик для кнопки "Изменить поиск города"
-@bot.callback_query_handler(func=lambda call: call.data == "change_city_filter")
-def change_city_filter(call):
-    user_id = call.from_user.id
-    database_manager.set_state(user_id, STATE_CHANGE_CITY_FILTER)
-    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-    bot.send_message(user_id, "Уточните город собеседника для поиска. Введите название города.")
-
-
-@bot.message_handler(
-    func=lambda message: database_manager.get_user_state(message.from_user.id) == STATE_CHANGE_CITY_FILTER)
-def set_city_filter_handler(message):
-    user_id = message.from_user.id
-    city_input = message.text.strip()
-
-    if validate_city_input(city_input):
-        database_manager.set_city_filter(user_id, city_input)
-        bot.send_message(user_id, f"Фильтр по городу установлен: {city_input}")
-        show_filter_settings(message)
-    else:
-        bot.send_message(user_id, "Некорректный формат. Укажите название города.")
-
-
-def validate_age_input(age_input):
-    if age_input.isdigit():
-        return True
-    elif '-' in age_input:
-        age_range = age_input.split('-')
-        if len(age_range) == 2 and all(part.strip().isdigit() for part in age_range):
-            return True
-    return False
-
-
-def validate_city_input(city_input):
-    return city_input.isalpha()
-
-
-def show_filter_settings(message):
-    user_id = message.from_user.id
-    filter_settings_data = messages["filter_settings_message"]
-    img_url = filter_settings_data["image_url"]
-    message_text = filter_settings_data["text"].format(
-        age=database_manager.get_age_filter(user_id),
-        city=database_manager.get_city_filter(user_id)
-    )
-    button_text_age = filter_settings_data["button_text_age"]
-    button_text_city = filter_settings_data["button_text_city"]
-    button_text_back = filter_settings_data["button_text_back"]
-    button_text_reset = "Сброс настроек"
-
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter"))
-    markup.add(types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter"))
-    markup.add(types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu"))
-    markup.add(types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings"))
-
-    bot.send_photo(
-        chat_id=message.chat.id,
-        photo=img_url,
-        caption=message_text,
-        reply_markup=markup
-    )
-
-
-# Обработчик для кнопки "Сброс настроек"
-@bot.callback_query_handler(func=lambda call: call.data == "reset_settings")
-def reset_settings(call):
-    user_id = call.from_user.id
-
-    # Удаляем фильтры из базы данных (предполагаем, что set_age_filter и set_city_filter удаляют запись, если передать None)
-    database_manager.set_age_filter(user_id, None)
-    database_manager.set_city_filter(user_id, None)
-
-    # Уведомляем пользователя о сбросе настроек
-    bot.send_message(chat_id=call.message.chat.id, text="Настройки фильтров были сброшены до изначальных значений.")
-
-    # Возвращаемся в меню настроек, чтобы пользователь видел обновленные значения
-    filter_settings(call)
