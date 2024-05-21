@@ -136,7 +136,7 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends", "status_find_love", "status_just_chat"]
+                      in ["status_find_friends", "status_find_love", "status_just_chat", "status_business"]
 )
 def ask_photo(call):
     user_registration.sending_photo(

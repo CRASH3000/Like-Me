@@ -36,6 +36,7 @@ messages = {
         "button_text_status_1": "👋 Найти друзей",
         "button_text_status_2": "💕 Найти вторую половинку",
         "button_text_status_3": "💌 Просто пообщаться",
+        "button_text_status_4": "🏦 Найти коллегу или наставника"
     },
     "ask_photo_message": {"text": "Теперь загрузи своё фото"},
     "photo_and_final_register_message": {
