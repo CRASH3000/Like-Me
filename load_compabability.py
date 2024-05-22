@@ -26,8 +26,13 @@ CHART_CLASS = "PM-qP"
 PERSENT_CLASS = "THo-S"
 
 
-def start():
+def load_compabability():
+    """загрузка совместимости"""
+    print(f"start loading from {URL}...")
     response = requests.get(URL, timeout=30000)
+    print(f"load status code is {response.status_code}")
+    print("start building json...")
+
     page_soup = BeautifulSoup(response.text, HTML_PARSER)
     all_frames = page_soup.find_all("div", class_=FRAME_CLASS)
     counter = 0
@@ -57,9 +62,12 @@ def start():
         result_json += "},"
     result_json = result_json[0 : len(result_json) - 1]
     result_json += "}"
-    with open("Output.json", "w") as text_file:
+    print("finish building json")
+
+    with open("compabability.json", "w") as text_file:
         text_file.write(result_json)
         text_file.close()
+    print("success!")
 
 
-start()
+load_compabability()
