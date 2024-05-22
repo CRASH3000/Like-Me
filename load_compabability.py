@@ -47,7 +47,6 @@ def start():
                 persent_span = chart_soup.find("span", class_=PERSENT_CLASS)
                 persent_str = persent_span.get_text()
                 current_zodiac = ALL_ZODIAC[zodiac_counter]
-                print(persent_str)
                 current_zodiac_string = f'"{current_zodiac}":"{persent_str}",'
                 result_json += current_zodiac_string
                 zodiac_counter += 1
@@ -58,8 +57,9 @@ def start():
         result_json += "},"
     result_json = result_json[0 : len(result_json) - 1]
     result_json += "}"
-    print(result_json)
-    print(counter)
+    with open("Output.json", "w") as text_file:
+        text_file.write(result_json)
+        text_file.close()
 
 
 start()
