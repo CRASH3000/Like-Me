@@ -31,12 +31,12 @@ def start():
     page_soup = BeautifulSoup(response.text, HTML_PARSER)
     all_frames = page_soup.find_all("div", class_=FRAME_CLASS)
     counter = 0
-    result_json = ""
+    result_json = "{"
     for sex in ALL_SEX:
-        sex_str = "{" + f'"{sex}"' + ":"
+        sex_str = f'"{sex}"' + ":{"
         result_json += sex_str
         for zodiac in ALL_ZODIAC:
-            zodiac_str = "{" + f'"{zodiac}"' + ":{"
+            zodiac_str = f'"{zodiac}"' + ":{"
             result_json += zodiac_str
             current_frame = str(all_frames[counter])
             current_frame_soup = BeautifulSoup(current_frame, HTML_PARSER)
@@ -51,10 +51,13 @@ def start():
                 current_zodiac_string = f'"{current_zodiac}":"{persent_str}",'
                 result_json += current_zodiac_string
                 zodiac_counter += 1
+            result_json = result_json[0 : len(result_json) - 1]
             counter += 1
             result_json += "},"
+        result_json = result_json[0 : len(result_json) - 1]
         result_json += "},"
-
+    result_json = result_json[0 : len(result_json) - 1]
+    result_json += "}"
     print(result_json)
     print(counter)
 
