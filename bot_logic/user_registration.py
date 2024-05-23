@@ -169,6 +169,7 @@ def status_selection(call, bot, database_manager, set_state, STATE_CHOOSE_STATUS
     # set_state(message.from_user.id, STATE_CHOOSE_STATUS)
     user_id = call.from_user.id
     zodiac_text = call.data
+    database_manager.update_user(user_id, zodiac=zodiac_text)
 
     print(zodiac_text)
     set_state(user_id, STATE_CHOOSE_STATUS)

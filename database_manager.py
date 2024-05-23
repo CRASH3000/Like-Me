@@ -25,7 +25,7 @@ def create_table():
             photo TEXT,
             gender TEXT,
             state INTEGER,
-            telegram_username TEXT
+            telegram_username TEXT,
             zodiac TEXT
         )
     """

@@ -136,11 +136,7 @@ def ask_zodiac(message):
     )
 
 
-@bot.callback_query_handler(
-    # func=lambda message: get_state(message.from_user.id) == STATE_ZODIAC
-    func=lambda call: call.data
-    in ALL_ZODIAC
-)
+@bot.callback_query_handler(func=lambda call: call.data in ALL_ZODIAC)
 def ask_status(message):
     user_registration.status_selection(
         message, bot, database_manager, set_state, STATE_CHOOSE_STATUS
@@ -190,6 +186,8 @@ def show_profile(call):
                 "Удалить профиль", callback_data="delete_profile"
             ),
         )
+
+        print(user_data)
 
         bot.edit_message_media(
             media=types.InputMediaPhoto(
