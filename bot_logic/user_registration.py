@@ -1,5 +1,6 @@
 from telebot import types
 from data_messages import messages
+from load_compatibility import ALL_ZODIAC
 
 
 # Обработчик для кнопки регистрации
@@ -138,11 +139,39 @@ def descriptions_request(message, bot, database_manager, set_state, STATE_DESCRI
     bot.send_message(message.chat.id, message_text, parse_mode="HTML")
 
 
-def status_selection(message, bot, database_manager, set_state, STATE_CHOOSE_STATUS):
+def zodiac_request(message, bot, database_manager, set_state, STATE_ZODIAC):
     user_id = message.from_user.id
     descriptions = message.text
     database_manager.update_user(user_id, descriptions=descriptions)
-    set_state(message.from_user.id, STATE_CHOOSE_STATUS)
+    markup_status = types.InlineKeyboardMarkup()
+
+    set_state(message.from_user.id, STATE_ZODIAC)
+    for zodiac in ALL_ZODIAC:
+        btn = types.InlineKeyboardButton(zodiac, callback_data=zodiac)
+        markup_status.add(btn)
+
+    message_text = "Выбери свой знак зодиака"
+    bot.send_message(
+        message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+    )
+    # city = message.text
+    # database_manager.update_user(user_id, city=city)
+    # set_state(message.from_user.id, STATE_ZODIAC)
+
+    # message_text = messages["ask_descriptions_message"]["text"]
+    # bot.send_message(message.chat.id, message_text, parse_mode="HTML")
+
+
+def status_selection(call, bot, database_manager, set_state, STATE_CHOOSE_STATUS):
+    # user_id = message.from_user.id
+    # descriptions = message.text
+    # database_manager.update_user(user_id, descriptions=descriptions)
+    # set_state(message.from_user.id, STATE_CHOOSE_STATUS)
+    user_id = call.from_user.id
+    zodiac_text = call.data
+
+    print(zodiac_text)
+    set_state(user_id, STATE_CHOOSE_STATUS)
 
     ask_status_data = messages["ask_status_message"]
     message_text = ask_status_data["text"]
@@ -160,8 +189,15 @@ def status_selection(message, bot, database_manager, set_state, STATE_CHOOSE_STA
     ]
     for button in buttons:
         markup_status.add(button)
-    bot.send_message(
-        message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+    # bot.send_message(
+    #     message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+    # )
+    bot.answer_callback_query(call.id)  # подтверждение получения callback
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=message_text,
+        reply_markup=markup_status,
     )
 
 
