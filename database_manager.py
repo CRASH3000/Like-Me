@@ -26,6 +26,7 @@ def create_table():
             gender TEXT,
             state INTEGER,
             telegram_username TEXT
+            zodiac TEXT
         )
     """
     )
@@ -78,16 +79,16 @@ def create_table():
 
 # Добавление нового пользователя в базу данных
 def add_user(
-        user_id,
-        name=None,
-        city=None,
-        age=None,
-        descriptions=None,
-        status=None,
-        photo=None,
-        gender=None,
-        telegram_username=None,
-        state=None,
+    user_id,
+    name=None,
+    city=None,
+    age=None,
+    descriptions=None,
+    status=None,
+    photo=None,
+    gender=None,
+    telegram_username=None,
+    state=None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -366,9 +367,13 @@ def get_friends(user_id):
             FROM users u 
             JOIN friends f ON u.id = f.friend_id 
             WHERE f.user_id = ?
-            """, (user_id,)
+            """,
+            (user_id,),
         )
-        friends = [{"id": row[0], "name": row[1], "username": row[2]} for row in cursor.fetchall()]
+        friends = [
+            {"id": row[0], "name": row[1], "username": row[2]}
+            for row in cursor.fetchall()
+        ]
         return friends
     except sqlite3.Error as e:
         print(f"Ошибка БД: {e}")
@@ -413,20 +418,20 @@ def remove_friend(user_id, friend_id):
 
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
-#conn = sqlite3.connect("users_database.db")
-#cursor = conn.cursor()
+# conn = sqlite3.connect("users_database.db")
+# cursor = conn.cursor()
 
-#cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
-#filtered_profiles = cursor.fetchall()
+# cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
+# filtered_profiles = cursor.fetchall()
 
-#conn.close()
+# conn.close()
 
-#return filtered_profiles
+# return filtered_profiles
 
 
 #  функцию фильтрации для выбора соответствующих анкет.
 
-#filtered_profiles = filter_profiles(STATE_PROFILE)
+# filtered_profiles = filter_profiles(STATE_PROFILE)
 
-#for profile in filtered_profiles:
-#print(profile)
+# for profile in filtered_profiles:
+# print(profile)

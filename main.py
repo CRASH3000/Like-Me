@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
+from load_compatibility import ALL_ZODIAC
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
 STATE_SEARCHING = 27
+STATE_ZODIAC = 28
 
 
 # Функция для обновления состояния пользователя
@@ -128,6 +130,17 @@ def ask_descriptions(message):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS
 )
+def ask_zodiac(message):
+    user_registration.zodiac_request(
+        message, bot, database_manager, set_state, STATE_ZODIAC
+    )
+
+
+@bot.callback_query_handler(
+    # func=lambda message: get_state(message.from_user.id) == STATE_ZODIAC
+    func=lambda call: call.data
+    in ALL_ZODIAC
+)
 def ask_status(message):
     user_registration.status_selection(
         message, bot, database_manager, set_state, STATE_CHOOSE_STATUS
@@ -136,7 +149,7 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends", "status_find_love", "status_just_chat"]
+    in ["status_find_friends", "status_find_love", "status_just_chat"]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -182,7 +195,7 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -233,7 +246,7 @@ def edit_name_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PROFILE_UPDATE
+    == STATE_WAITING_FOR_PROFILE_UPDATE
 )
 def update_name_callback(message):
     profile_editing.update_name(message)
@@ -251,7 +264,7 @@ def edit_descriptions_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+    == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
 )
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
@@ -267,7 +280,7 @@ def edit_status_callback(call):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+    in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
 )
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
@@ -281,7 +294,7 @@ def edit_city_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_CITY_UPDATE
+    == STATE_WAITING_FOR_CITY_UPDATE
 )
 def update_city_callback(message):
     profile_editing.update_city(message)
@@ -298,7 +311,7 @@ def edit_photo_callback(call):
 @bot.message_handler(
     content_types=["photo"],
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PHOTO_UPDATE,
+    == STATE_WAITING_FOR_PHOTO_UPDATE,
 )
 def update_photo_callback(message):
     profile_editing.update_photo(message)
@@ -373,9 +386,7 @@ def main_screen(call):
         )
     )
     markup_main_buttons.row(
-        types.InlineKeyboardButton(
-            button_text_my_friends, callback_data="show_friends"
-        )
+        types.InlineKeyboardButton(button_text_my_friends, callback_data="show_friends")
     )
     # С помощью метода .row() можно сделать одну большую кнопку
 
@@ -444,7 +455,7 @@ def start_searching(call):
             media=types.InputMediaPhoto(
                 user_profile[6],
                 caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
+                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -516,7 +527,7 @@ def handle_like(call):
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
                 reply_markup=reply_markup,
             )
 
@@ -543,7 +554,7 @@ def handle_like(call):
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -595,7 +606,7 @@ def notify_likes(user_id):
             chat_id=user_id,
             photo=liker_data[6],
             caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
-                    f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+            f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
             reply_markup=reply_markup,
         )
 

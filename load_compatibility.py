@@ -20,6 +20,20 @@ ALL_ZODIAC = [
     "ВОДОЛЕЙ",
     "РЫБЫ",
 ]
+# ALL_ZODIAC_KEY = [
+#     "oven",
+#     "telec",
+#     "bliznec",
+#     "rac",
+#     "lev",
+#     "deva",
+#     "vesi",
+#     "scorpio",
+#     "strelec",
+#     "kozerog",
+#     "vodoley",
+#     "ribi",
+# ]
 
 FRAME_CLASS = "j+xoX"
 CHART_CLASS = "PM-qP"
@@ -70,4 +84,5 @@ def load_compabability():
     print("success!")
 
 
-load_compabability()
+# разкомментировать для загрузки данных
+# load_compabability()
