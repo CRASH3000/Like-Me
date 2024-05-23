@@ -5,7 +5,7 @@ HTML_PARSER = "html.parser"
 
 URL = "https://horoscopes.rambler.ru/sovmestimost-znakov-zodiaka/"
 
-ALL_SEX = ["МУЖЧИНА", "ЖЕНЩИНА"]
+ALL_GENDER = ["МУЖЧИНА", "ЖЕНЩИНА"]
 ALL_ZODIAC = [
     "ОВЕН",
     "ТЕЛЕЦ",
@@ -37,7 +37,7 @@ def load_compabability():
     all_frames = page_soup.find_all("div", class_=FRAME_CLASS)
     counter = 0
     result_json = "{"
-    for sex in ALL_SEX:
+    for sex in ALL_GENDER:
         sex_str = f'"{sex}"' + ":{"
         result_json += sex_str
         for zodiac in ALL_ZODIAC:
@@ -64,7 +64,7 @@ def load_compabability():
     result_json += "}"
     print("finish building json")
 
-    with open("compabability.json", "w") as text_file:
+    with open("compatibility.json", "w", encoding="UTF-8") as text_file:
         text_file.write(result_json)
         text_file.close()
     print("success!")

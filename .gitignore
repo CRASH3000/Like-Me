@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+bot_logic/__pycache__
 *.py[cod]
 *$py.class
 
