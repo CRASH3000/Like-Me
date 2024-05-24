@@ -27,10 +27,10 @@ def age_input(message, bot, database_manager, set_state, STATE_ASK_CONSENT):
         age = int(message.text)
         if age < 1 or age > 110:
             error_text = messages["age_input_message"]["error_text_age_over_110"]
-            bot.send_message(message.chat.id, error_text)
+            bot.send_message(message.chat.id, error_text, parse_mode="HTML")
         elif age < 16:
             error_text = messages["age_input_message"]["error_text_age_under_16"]
-            bot.send_message(message.chat.id, error_text)
+            bot.send_message(message.chat.id, error_text, parse_mode="HTML")
             database_manager.delete_user(user_id)  # Удаление пользователя из БД
             set_state(user_id, None)
         else:
@@ -126,6 +126,7 @@ def city_request(call, bot, database_manager, set_state, STATE_ENTER_CITY):
         message_id=call.message.message_id,
         text=message_text,
         reply_markup=None,
+        parse_mode="HTML",
     )
 
 
