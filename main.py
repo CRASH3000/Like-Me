@@ -606,8 +606,9 @@ def check_mutual_like(user_id, liked_user_id):
 def notify_likes(user_id):
     likers = database_manager.get_likers(user_id)
     current_user = database_manager.get_user(user_id)
-    current_gender = current_user[GENDER_IDX].upper()
-    current_zodiac = current_user[ZODIAC_IDX].upper()
+    if current_user:
+        current_gender = current_user[GENDER_IDX].upper()
+        current_zodiac = current_user[ZODIAC_IDX].upper()
 
     print(current_gender)
     print(current_zodiac)
