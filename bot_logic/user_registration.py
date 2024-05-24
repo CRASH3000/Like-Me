@@ -164,24 +164,13 @@ def zodiac_request(message, bot, database_manager, set_state, STATE_ZODIAC):
     bot.send_message(
         message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
     )
-    # city = message.text
-    # database_manager.update_user(user_id, city=city)
-    # set_state(message.from_user.id, STATE_ZODIAC)
-
-    # message_text = messages["ask_descriptions_message"]["text"]
-    # bot.send_message(message.chat.id, message_text, parse_mode="HTML")
 
 
 def status_selection(call, bot, database_manager, set_state, STATE_CHOOSE_STATUS):
-    # user_id = message.from_user.id
-    # descriptions = message.text
-    # database_manager.update_user(user_id, descriptions=descriptions)
-    # set_state(message.from_user.id, STATE_CHOOSE_STATUS)
     user_id = call.from_user.id
     zodiac_text = call.data
     database_manager.update_user(user_id, zodiac=zodiac_text)
 
-    print(zodiac_text)
     set_state(user_id, STATE_CHOOSE_STATUS)
 
     ask_status_data = messages["ask_status_message"]
@@ -200,9 +189,7 @@ def status_selection(call, bot, database_manager, set_state, STATE_CHOOSE_STATUS
     ]
     for button in buttons:
         markup_status.add(button)
-    # bot.send_message(
-    #     message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
-    # )
+
     bot.answer_callback_query(call.id)  # подтверждение получения callback
     bot.edit_message_text(
         chat_id=call.message.chat.id,

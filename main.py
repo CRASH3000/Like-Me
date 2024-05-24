@@ -206,8 +206,6 @@ def show_profile(call):
             ),
         )
 
-        print(user_data)
-
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_data[6],
@@ -634,7 +632,6 @@ def notify_likes(user_id):
                 "Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"
             )
         )
-        print(liked_zodiac)
         reply_markup.add(
             types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
         )

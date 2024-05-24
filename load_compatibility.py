@@ -1,26 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
-from zodiac_constant import ALL_ZODIAC
+from compatibility_constant import ALL_ZODIAC
 
 HTML_PARSER = "html.parser"
 
 URL = "https://horoscopes.rambler.ru/sovmestimost-znakov-zodiaka/"
 
 ALL_GENDER = ["МУЖЧИНА", "ЖЕНЩИНА"]
-# ALL_ZODIAC = [
-#     "ОВЕН",
-#     "ТЕЛЕЦ",
-#     "БЛИЗНЕЦЫ",
-#     "РАК",
-#     "ЛЕВ",
-#     "ДЕВА",
-#     "ВЕСЫ",
-#     "СКОРПИОН",
-#     "СТРЕЛЕЦ",
-#     "КОЗЕРОГ",
-#     "ВОДОЛЕЙ",
-#     "РЫБЫ",
-# ]
 
 
 FRAME_CLASS = "j+xoX"
