@@ -87,7 +87,7 @@ def ask_age(call):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE
 )
-def ask_age(message):
+def ask_age_handler(message):
     user_registration.age_input(
         message, bot, database_manager, set_state, STATE_ASK_CONSENT
     )
@@ -204,7 +204,8 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
+                f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -226,7 +227,7 @@ def edit_profile(call):
     button_des = "Описание"
     button_status = "Статус"
     button_city = "Город"
-    button_photo = "Фото"
+    button_photo = "Знак зодиака"
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -459,12 +460,18 @@ def start_searching(call):
         reply_markup.row(
             types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
         )
-
+        current_user_gender = user_data[GENDER_IDX].upper()
+        current_user_zodiac = user_data[ZODIAC_IDX]
+        profile_user_zodiac = user_profile[ZODIAC_IDX]
+        current_compatibility = compatibility[current_user_gender][current_user_zodiac][
+            profile_user_zodiac
+        ]
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_profile[6],
                 caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
+                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
+                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
