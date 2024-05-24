@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
-from zodiac_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
+from compatibility_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
 import json
 
 
