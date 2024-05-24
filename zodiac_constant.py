@@ -12,3 +12,8 @@ ALL_ZODIAC = [
     "ВОДОЛЕЙ",
     "РЫБЫ",
 ]
+
+
+ZODIAC_IDX = 10
+
+GENDER_IDX = 7
