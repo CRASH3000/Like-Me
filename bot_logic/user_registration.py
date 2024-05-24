@@ -1,6 +1,6 @@
 from telebot import types
 from data_messages import messages
-from zodiac_constant import ALL_ZODIAC
+from compatibility_constant import ALL_ZODIAC
 
 
 # Обработчик для кнопки регистрации
