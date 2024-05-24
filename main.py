@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
-from load_compatibility import ALL_ZODIAC
+from zodiac_constant import ALL_ZODIAC
 
 load_dotenv()
 
@@ -131,6 +131,11 @@ def ask_descriptions(message):
     func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS
 )
 def ask_zodiac(message):
+    """указываем знак зодиака при регистрации
+
+    Args:
+        message (_type_): _description_
+    """
     user_registration.zodiac_request(
         message, bot, database_manager, set_state, STATE_ZODIAC
     )
@@ -604,7 +609,7 @@ def notify_likes(user_id):
             chat_id=user_id,
             photo=liker_data[6],
             caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
-            f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+            f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}\n",
             reply_markup=reply_markup,
         )
 

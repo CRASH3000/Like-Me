@@ -1,6 +1,6 @@
 from telebot import types
 from data_messages import messages
-from load_compatibility import ALL_ZODIAC
+from zodiac_constant import ALL_ZODIAC
 
 
 # Обработчик для кнопки регистрации
@@ -140,6 +140,15 @@ def descriptions_request(message, bot, database_manager, set_state, STATE_DESCRI
 
 
 def zodiac_request(message, bot, database_manager, set_state, STATE_ZODIAC):
+    """обработчик зз
+
+    Args:
+        message (_type_): _description_
+        bot (_type_): _description_
+        database_manager (_type_): _description_
+        set_state (_type_): _description_
+        STATE_ZODIAC (_type_): _description_
+    """
     user_id = message.from_user.id
     descriptions = message.text
     database_manager.update_user(user_id, descriptions=descriptions)
