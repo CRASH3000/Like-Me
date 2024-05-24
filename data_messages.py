@@ -73,7 +73,7 @@ messages = {
         "button_text_start_searching": "🔍 Начать поиск 🔍",
         "button_text_profile": "🪪 Мой профиль",
         "button_text_my_friends": "Мои друзья",
-        "button_text_about": "ℹ️ О Проекте",,
+        "button_text_about": "ℹ️ О Проекте",
     },
     "about_project_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
