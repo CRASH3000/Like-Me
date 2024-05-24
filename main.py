@@ -56,6 +56,14 @@ STATE_SEARCHING = 27
 STATE_ZODIAC = 28
 
 
+def get_compatibility(user_gender, user_zodiac, partner_zodiac):
+    return (
+        compatibility.get(user_gender.upper())
+        .get(user_zodiac.upper())
+        .get(partner_zodiac.upper())
+    )
+
+
 # Функция для обновления состояния пользователя
 def set_state(user_id, state):
     print(f"Setting state for user {user_id} to {state}")
@@ -227,7 +235,7 @@ def edit_profile(call):
     button_des = "Описание"
     button_status = "Статус"
     button_city = "Город"
-    button_photo = "Знак зодиака"
+    button_photo = "Фото"
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -460,12 +468,12 @@ def start_searching(call):
         reply_markup.row(
             types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
         )
-        current_user_gender = user_data[GENDER_IDX].upper()
+        current_user_gender = user_data[GENDER_IDX]
         current_user_zodiac = user_data[ZODIAC_IDX]
         profile_user_zodiac = user_profile[ZODIAC_IDX]
-        current_compatibility = compatibility[current_user_gender][current_user_zodiac][
-            profile_user_zodiac
-        ]
+        current_compatibility = get_compatibility(
+            current_user_gender, current_user_zodiac, profile_user_zodiac
+        )
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_profile[6],
@@ -532,9 +540,9 @@ def handle_like(call):
         liked_user_zodiac = liked_user_data[ZODIAC_IDX]
         user_zodiac = user_data[ZODIAC_IDX]
 
-        current_compatibility = compatibility[liked_user_gender][liked_user_zodiac][
-            user_zodiac
-        ]
+        current_compatibility = get_compatibility(
+            liked_user_gender, liked_user_zodiac, user_zodiac
+        )
         if user_data:
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
@@ -614,11 +622,9 @@ def notify_likes(user_id):
     likers = database_manager.get_likers(user_id)
     current_user = database_manager.get_user(user_id)
     if current_user:
-        current_gender = current_user[GENDER_IDX].upper()
-        current_zodiac = current_user[ZODIAC_IDX].upper()
+        current_gender = current_user[GENDER_IDX]
+        current_zodiac = current_user[ZODIAC_IDX]
 
-    print(current_gender)
-    print(current_zodiac)
     for liker_id in likers:
         liker_data = database_manager.get_user(liker_id)
         liked_zodiac = liker_data[ZODIAC_IDX]
@@ -632,9 +638,9 @@ def notify_likes(user_id):
         reply_markup.add(
             types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
         )
-        current_compatibility = compatibility[current_gender][current_zodiac][
-            liked_zodiac
-        ]
+        current_compatibility = get_compatibility(
+            current_gender, current_zodiac, liked_zodiac
+        )
         caption = (
             f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}\nВаша совместимость: {current_compatibility}\n",
         )
