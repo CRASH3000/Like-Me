@@ -20,7 +20,7 @@ else:
     print("Токен API успешно загружен")
 
 
-with open("compatibility.json") as compatibility_json:
+with open("compatibility.json", "r", encoding="utf-8") as compatibility_json:
     compatibility = json.load(compatibility_json)
 
 USER_DATA = {}  # Словарь для хранения данных пользователей
