@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
+from compatibility_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
+import json
+
 
 load_dotenv()
 
@@ -15,6 +18,10 @@ if API_TOKEN is None:
     print("Ошибка: Токен API не найден.")
 else:
     print("Токен API успешно загружен")
+
+
+with open("compatibility.json", "r", encoding="utf-8") as compatibility_json:
+    compatibility = json.load(compatibility_json)
 
 USER_DATA = {}  # Словарь для хранения данных пользователей
 
@@ -46,6 +53,15 @@ STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
 STATE_SEARCHING = 27
+STATE_ZODIAC = 28
+
+
+def get_compatibility(user_gender, user_zodiac, partner_zodiac):
+    return (
+        compatibility.get(user_gender.upper())
+        .get(user_zodiac.upper())
+        .get(partner_zodiac.upper())
+    )
 
 
 # Функция для обновления состояния пользователя
@@ -79,7 +95,7 @@ def ask_age(call):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE
 )
-def ask_age(message):
+def ask_age_handler(message):
     user_registration.age_input(
         message, bot, database_manager, set_state, STATE_ASK_CONSENT
     )
@@ -128,6 +144,18 @@ def ask_descriptions(message):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS
 )
+def ask_zodiac(message):
+    """указываем знак зодиака при регистрации
+
+    Args:
+        message (_type_): _description_
+    """
+    user_registration.zodiac_request(
+        message, bot, database_manager, set_state, STATE_ZODIAC
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ALL_ZODIAC)
 def ask_status(message):
     user_registration.status_selection(
         message, bot, database_manager, set_state, STATE_CHOOSE_STATUS
@@ -136,7 +164,7 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends", "status_find_love", "status_just_chat"]
+    in ["status_find_friends", "status_find_love", "status_just_chat"]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -182,7 +210,8 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
+                f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -233,7 +262,7 @@ def edit_name_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PROFILE_UPDATE
+    == STATE_WAITING_FOR_PROFILE_UPDATE
 )
 def update_name_callback(message):
     profile_editing.update_name(message)
@@ -251,7 +280,7 @@ def edit_descriptions_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+    == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
 )
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
@@ -267,7 +296,7 @@ def edit_status_callback(call):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+    in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
 )
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
@@ -281,7 +310,7 @@ def edit_city_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_CITY_UPDATE
+    == STATE_WAITING_FOR_CITY_UPDATE
 )
 def update_city_callback(message):
     profile_editing.update_city(message)
@@ -298,7 +327,7 @@ def edit_photo_callback(call):
 @bot.message_handler(
     content_types=["photo"],
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PHOTO_UPDATE,
+    == STATE_WAITING_FOR_PHOTO_UPDATE,
 )
 def update_photo_callback(message):
     profile_editing.update_photo(message)
@@ -373,9 +402,7 @@ def main_screen(call):
         )
     )
     markup_main_buttons.row(
-        types.InlineKeyboardButton(
-            button_text_my_friends, callback_data="show_friends"
-        )
+        types.InlineKeyboardButton(button_text_my_friends, callback_data="show_friends")
     )
     # С помощью метода .row() можно сделать одну большую кнопку
 
@@ -439,12 +466,18 @@ def start_searching(call):
         reply_markup.row(
             types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
         )
-
+        current_user_gender = user_data[GENDER_IDX]
+        current_user_zodiac = user_data[ZODIAC_IDX]
+        profile_user_zodiac = user_profile[ZODIAC_IDX]
+        current_compatibility = get_compatibility(
+            current_user_gender, current_user_zodiac, profile_user_zodiac
+        )
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_profile[6],
                 caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
+                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
+                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -483,10 +516,10 @@ def handle_like(call):
 
     database_manager.add_like(user_id, liked_user_id)
     send_temporary_confirmation(user_id, "Ваш лайк успешно отправлен!")
+    liked_user_data = database_manager.get_user(liked_user_id)
 
     if check_mutual_like(user_id, liked_user_id):
         user_data = database_manager.get_user(user_id)
-        liked_user_data = database_manager.get_user(liked_user_id)
         if user_data and liked_user_data:
             send_temporary_confirmation(
                 user_id,
@@ -501,6 +534,13 @@ def handle_like(call):
 
     elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
         user_data = database_manager.get_user(user_id)
+        liked_user_gender = liked_user_data[GENDER_IDX]
+        liked_user_zodiac = liked_user_data[ZODIAC_IDX]
+        user_zodiac = user_data[ZODIAC_IDX]
+
+        current_compatibility = get_compatibility(
+            liked_user_gender, liked_user_zodiac, user_zodiac
+        )
         if user_data:
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
@@ -516,7 +556,7 @@ def handle_like(call):
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}\nВаша совместимость: {current_compatibility}",
                 reply_markup=reply_markup,
             )
 
@@ -543,7 +583,7 @@ def handle_like(call):
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -578,9 +618,14 @@ def check_mutual_like(user_id, liked_user_id):
 
 def notify_likes(user_id):
     likers = database_manager.get_likers(user_id)
+    current_user = database_manager.get_user(user_id)
+    if current_user:
+        current_gender = current_user[GENDER_IDX]
+        current_zodiac = current_user[ZODIAC_IDX]
+
     for liker_id in likers:
         liker_data = database_manager.get_user(liker_id)
-
+        liked_zodiac = liker_data[ZODIAC_IDX]
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
             types.InlineKeyboardButton(
@@ -590,12 +635,17 @@ def notify_likes(user_id):
         reply_markup.add(
             types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
         )
+        current_compatibility = get_compatibility(
+            current_gender, current_zodiac, liked_zodiac
+        )
+        caption = (
+            f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}\nВаша совместимость: {current_compatibility}\n",
+        )
 
         bot.send_photo(
             chat_id=user_id,
             photo=liker_data[6],
-            caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
-                    f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+            caption=caption,
             reply_markup=reply_markup,
         )
 
