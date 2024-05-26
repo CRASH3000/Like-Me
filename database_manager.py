@@ -26,7 +26,9 @@ def create_table():
             gender TEXT,
             state INTEGER,
             telegram_username TEXT,
-            zodiac TEXT
+            zodiac TEXT,
+            age_filter INTEGER,
+            city_filter TEXT
         )
     """
     )
@@ -294,8 +296,8 @@ def get_next_profile(user_id, target_status):
         params = [user_id, user_id, user_id, target_status]
 
         if age_filter != "по умолчанию":
-            if '-' in age_filter:
-                age_range = age_filter.split('-')
+            if "-" in age_filter:
+                age_range = age_filter.split("-")
                 age_conditions = "AND age BETWEEN ? AND ?"
                 params.extend([int(age_range[0]), int(age_range[1])])
             else:
@@ -342,7 +344,6 @@ def get_next_profile(user_id, target_status):
         return user_data
     finally:
         conn.close()
-
 
 
 # Удаление пользователя из базы данных
@@ -453,6 +454,7 @@ def remove_friend(user_id, friend_id):
     finally:
         conn.close()
 
+
 def set_state(user_id, state):
     conn = get_connection()
     cursor = conn.cursor()
@@ -460,13 +462,6 @@ def set_state(user_id, state):
     conn.commit()
     conn.close()
 
-def get_user_state(user_id):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT state FROM users WHERE id=?", (user_id,))
-    state = cursor.fetchone()
-    conn.close()
-    return state[0] if state else None
 
 def set_age_filter(user_id, age_filter):
     conn = get_connection()
@@ -481,6 +476,7 @@ def set_age_filter(user_id, age_filter):
     finally:
         conn.close()
 
+
 def get_age_filter(user_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -490,6 +486,7 @@ def get_age_filter(user_id):
         return age_filter[0] if age_filter and age_filter[0] else "по умолчанию"
     finally:
         conn.close()
+
 
 def set_city_filter(user_id, city_filter):
     conn = get_connection()
@@ -504,6 +501,7 @@ def set_city_filter(user_id, city_filter):
     finally:
         conn.close()
 
+
 def get_city_filter(user_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -511,6 +509,7 @@ def get_city_filter(user_id):
     city_filter = cursor.fetchone()
     conn.close()
     return city_filter[0] if city_filter and city_filter[0] else "по умолчанию"
+
 
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
@@ -529,6 +528,5 @@ def get_city_filter(user_id):
 
 # filtered_profiles = filter_profiles(STATE_PROFILE)
 
-#for profile in filtered_profiles:
-#print(profile)
-
+# for profile in filtered_profiles:
+# print(profile)

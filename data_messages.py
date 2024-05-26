@@ -41,8 +41,8 @@ messages = {
         "text": "Какую цель общения ты ищешь?",
         "button_text_status_1": "👋 Найти друзей",
         "button_text_status_2": "💕 Найти вторую половинку",
-        "button_text_status_3": "💌 Просто пообщаться",
-        "button_text_status_4": "🏦 Найти коллегу или наставника"
+        "button_text_status_3": "💬 Просто пообщаться",
+        "button_text_status_4": "🏦 Найти коллегу или наставника",
     },
     "ask_photo_message": {"text": "Теперь загрузи своё фото 🖼"},
     "photo_and_final_register_message": {
@@ -73,7 +73,8 @@ messages = {
         "настроить свой профиль.",
         "button_text_start_searching": "🔍 Начать поиск 🔍",
         "button_text_profile": "🪪 Мой профиль",
-        "button_text_my_friends": "Мои друзья",
+        "button_text_my_friends": "👥 Мои друзья",
+        "button_text_settings": "⚙️ Настройки поиска",
         "button_text_about": "ℹ️ О Проекте",
     },
     "about_project_message": {
@@ -92,20 +93,14 @@ messages = {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
         "button_text_search": "Начать поиск собеседника",
         "button_text_back": "Назад",
-<<<<<<< HEAD
-        "text_no_friends": "Здесь пока никого нет 🙁"
-
+        "text_no_friends": "Здесь пока никого нет 🙁",
     },
     "filter_settings_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
         "text": "Настройки поиска\nВозраст - {age}\nГород - {city}",
         "button_text_age": "Изменить поиск возраста",
         "button_text_city": "Изменить поиск города",
-        "button_text_back": "Назад"
-    }
-    
-=======
-        "text_no_friends": "Здесь пока никого нет 🙁",
+        "button_text_reset_settings": "Сбросить настройки",
+        "button_text_back": "Назад",
     },
->>>>>>> a8cfc3658da6f349cb38a0d793cc8db37b70257b
 }
