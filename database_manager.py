@@ -25,7 +25,8 @@ def create_table():
             photo TEXT,
             gender TEXT,
             state INTEGER,
-            telegram_username TEXT
+            telegram_username TEXT,
+            zodiac TEXT
         )
     """
     )
@@ -78,16 +79,16 @@ def create_table():
 
 # Добавление нового пользователя в базу данных
 def add_user(
-        user_id,
-        name=None,
-        city=None,
-        age=None,
-        descriptions=None,
-        status=None,
-        photo=None,
-        gender=None,
-        telegram_username=None,
-        state=None,
+    user_id,
+    name=None,
+    city=None,
+    age=None,
+    descriptions=None,
+    status=None,
+    photo=None,
+    gender=None,
+    telegram_username=None,
+    state=None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -285,6 +286,26 @@ def get_next_profile(user_id, target_status):
     conn = get_connection()
     cursor = conn.cursor()
     try:
+        age_filter = get_age_filter(user_id)
+        city_filter = get_city_filter(user_id)
+
+        age_conditions = ""
+        city_conditions = ""
+        params = [user_id, user_id, user_id, target_status]
+
+        if age_filter != "по умолчанию":
+            if '-' in age_filter:
+                age_range = age_filter.split('-')
+                age_conditions = "AND age BETWEEN ? AND ?"
+                params.extend([int(age_range[0]), int(age_range[1])])
+            else:
+                age_conditions = "AND age = ?"
+                params.append(int(age_filter))
+
+        if city_filter != "по умолчанию":
+            city_conditions = "AND city = ?"
+            params.append(city_filter)
+
         # Проверка наличия профилей в очереди
         cursor.execute(
             "SELECT queued_user_id FROM queued_profiles WHERE user_id=? ORDER BY rowid LIMIT 1",
@@ -301,9 +322,27 @@ def get_next_profile(user_id, target_status):
             return get_user(queued_user_id)
 
         # Если в очереди нет профилей, ищем случайного пользователя
-        return filters.filter_users(user_id, target_status)
+        query = f"""
+            SELECT * FROM users 
+            WHERE id NOT IN (
+                SELECT viewed_user_id FROM viewed_profiles WHERE user_id=?
+            )
+            AND id NOT IN (
+                SELECT friend_id FROM friends WHERE user_id=?
+            )
+            AND id != ?
+            AND status = ?
+            {age_conditions}
+            {city_conditions}
+            ORDER BY RANDOM() 
+            LIMIT 1
+        """
+        cursor.execute(query, params)
+        user_data = cursor.fetchone()
+        return user_data
     finally:
         conn.close()
+
 
 
 # Удаление пользователя из базы данных
@@ -366,9 +405,13 @@ def get_friends(user_id):
             FROM users u 
             JOIN friends f ON u.id = f.friend_id 
             WHERE f.user_id = ?
-            """, (user_id,)
+            """,
+            (user_id,),
         )
-        friends = [{"id": row[0], "name": row[1], "username": row[2]} for row in cursor.fetchall()]
+        friends = [
+            {"id": row[0], "name": row[1], "username": row[2]}
+            for row in cursor.fetchall()
+        ]
         return friends
     except sqlite3.Error as e:
         print(f"Ошибка БД: {e}")
@@ -410,23 +453,82 @@ def remove_friend(user_id, friend_id):
     finally:
         conn.close()
 
+def set_state(user_id, state):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET state=? WHERE id=?", (state, user_id))
+    conn.commit()
+    conn.close()
+
+def get_user_state(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT state FROM users WHERE id=?", (user_id,))
+    state = cursor.fetchone()
+    conn.close()
+    return state[0] if state else None
+
+def set_age_filter(user_id, age_filter):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE users SET age_filter=? WHERE id=?", (age_filter, user_id)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+def get_age_filter(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT age_filter FROM users WHERE id=?", (user_id,))
+        age_filter = cursor.fetchone()
+        return age_filter[0] if age_filter and age_filter[0] else "по умолчанию"
+    finally:
+        conn.close()
+
+def set_city_filter(user_id, city_filter):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE users SET city_filter=? WHERE id=?", (city_filter, user_id)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+def get_city_filter(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT city_filter FROM users WHERE id=?", (user_id,))
+    city_filter = cursor.fetchone()
+    conn.close()
+    return city_filter[0] if city_filter and city_filter[0] else "по умолчанию"
 
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
-#conn = sqlite3.connect("users_database.db")
-#cursor = conn.cursor()
+# conn = sqlite3.connect("users_database.db")
+# cursor = conn.cursor()
 
-#cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
-#filtered_profiles = cursor.fetchall()
+# cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
+# filtered_profiles = cursor.fetchall()
 
-#conn.close()
+# conn.close()
 
-#return filtered_profiles
+# return filtered_profiles
 
 
 #  функцию фильтрации для выбора соответствующих анкет.
 
-#filtered_profiles = filter_profiles(STATE_PROFILE)
+# filtered_profiles = filter_profiles(STATE_PROFILE)
 
 #for profile in filtered_profiles:
 #print(profile)
+
