@@ -579,11 +579,17 @@ def handle_like(call):
                 )
             )
 
+            next_user_compatibility = get_compatibility(
+                user_gender=user_data[GENDER_IDX],
+                user_zodiac=user_data[ZODIAC_IDX],
+                partner_zodiac=next_user_data[ZODIAC_IDX],
+            )
             bot.edit_message_media(
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"
+                    f"\nЗнак зодиака: {next_user_data[ZODIAC_IDX]}\nВаша совместимость: {next_user_compatibility}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
