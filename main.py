@@ -562,7 +562,7 @@ def handle_like(call):
                 )
             )
             reply_markup.add(
-                types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+                types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{user_id}")
             )
             bot.send_photo(
                 chat_id=liked_user_id,
@@ -645,7 +645,7 @@ def notify_likes(user_id):
             )
         )
         reply_markup.add(
-            types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+            types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{liker_id}")
         )
         current_compatibility = get_compatibility(
             current_gender, current_zodiac, liked_zodiac
@@ -698,13 +698,21 @@ def restart_searching(call):
 
 def send_temporary_confirmation(user_id, message_text):
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("ОК", callback_data="decline_"))
+    markup.add(types.InlineKeyboardButton("ОК", callback_data="delete_message"))
     bot.send_message(user_id, message_text, reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "delete_message")
+def delete_message(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("decline_"))
 def handle_decline(call):
-    # Удаляем сообщение с предложением
+    user_id = call.from_user.id
+    liked_user_id = int(call.data.split("_")[1])
+
+    database_manager.remove_like(liked_user_id, user_id)
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 

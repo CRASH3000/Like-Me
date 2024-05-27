@@ -511,6 +511,21 @@ def get_city_filter(user_id):
     return city_filter[0] if city_filter and city_filter[0] else "по умолчанию"
 
 
+def remove_like(user_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM likes WHERE user_id=? AND liked_user_id=?",
+            (user_id, liked_user_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка при удалении лайка: {e}")
+    finally:
+        conn.close()
+
+
 # функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
 # def filter_profiles(STATE_PROFILE):
 # conn = sqlite3.connect("users_database.db")
