@@ -8,7 +8,6 @@ from bot_logic import profile_editing, user_registration, start_bot, add_friends
 from compatibility_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
 import json
 
-
 load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
@@ -18,7 +17,6 @@ if API_TOKEN is None:
     print("Ошибка: Токен API не найден.")
 else:
     print("Токен API успешно загружен")
-
 
 with open("compatibility.json", "r", encoding="utf-8") as compatibility_json:
     compatibility = json.load(compatibility_json)
@@ -53,7 +51,10 @@ STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
 STATE_SEARCHING = 27
-STATE_ZODIAC = 28
+STATE_FILTER_SETTINGS = 28
+STATE_CHANGE_AGE_FILTER = 29
+STATE_CHANGE_CITY_FILTER = 30
+STATE_ZODIAC = 31
 
 
 def get_compatibility(user_gender, user_zodiac, partner_zodiac):
@@ -164,7 +165,12 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-    in ["status_find_friends", "status_find_love", "status_just_chat"]
+    in [
+        "status_find_friends",
+        "status_find_love",
+        "status_just_chat",
+        "status_business",
+    ]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -393,19 +399,25 @@ def main_screen(call):
     button_text_start_searching = main_screen_data["button_text_start_searching"]
     button_text_profile = main_screen_data["button_text_profile"]
     button_text_about = main_screen_data["button_text_about"]
+    button_text_settings = main_screen_data["button_text_settings"]
     button_text_my_friends = main_screen_data["button_text_my_friends"]
 
     markup_main_buttons = types.InlineKeyboardMarkup()
+    # С помощью метода .row() можно сделать одну большую кнопку
     markup_main_buttons.row(
         types.InlineKeyboardButton(
             button_text_start_searching, callback_data="start_searching"
         )
     )
-    markup_main_buttons.row(
-        types.InlineKeyboardButton(button_text_my_friends, callback_data="show_friends")
-    )
-    # С помощью метода .row() можно сделать одну большую кнопку
 
+    markup_main_buttons.add(
+        types.InlineKeyboardButton(
+            button_text_my_friends, callback_data="show_friends"
+        ),
+        types.InlineKeyboardButton(
+            button_text_settings, callback_data="filter_settings"
+        ),
+    )
     markup_main_buttons.add(
         types.InlineKeyboardButton(button_text_profile, callback_data="show_profile"),
         types.InlineKeyboardButton(button_text_about, callback_data="about_project"),
@@ -715,6 +727,166 @@ def view_friends(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_friend_"))
 def delete_friend(call):
     add_friends.delete_friend(call, bot, database_manager)
+
+
+# Обработчик для кнопки "Настройки"
+@bot.callback_query_handler(func=lambda call: call.data == "filter_settings")
+def filter_settings(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_FILTER_SETTINGS)
+
+    filter_settings_data = messages["filter_settings_message"]
+    img_url = filter_settings_data["image_url"]
+    message_text = filter_settings_data["text"].format(
+        age=database_manager.get_age_filter(user_id),
+        city=database_manager.get_city_filter(user_id),
+    )
+    button_text_age = filter_settings_data["button_text_age"]
+    button_text_city = filter_settings_data["button_text_city"]
+    button_text_back = filter_settings_data["button_text_back"]
+    button_text_reset = "Сброс настроек"
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu")
+    )
+
+    bot.edit_message_media(
+        media=types.InputMediaPhoto(img_url, caption=message_text),
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=markup,
+    )
+
+
+# Обработчик для кнопки "Изменить поиск возраста"
+@bot.callback_query_handler(func=lambda call: call.data == "change_age_filter")
+def change_age_filter(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_CHANGE_AGE_FILTER)
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+    bot.send_message(
+        user_id,
+        "Уточните возраст собеседника для поиска. Вы можете искать людей одного возраста написав например 20 или указать возрастной лимит, например 20 - 30",
+    )
+
+
+@bot.message_handler(
+    func=lambda message: database_manager.get_user_state(message.from_user.id)
+    == STATE_CHANGE_AGE_FILTER
+)
+def set_age_filter_handler(message):
+    user_id = message.from_user.id
+    age_input = message.text.strip()
+
+    if validate_age_input(age_input):
+        database_manager.set_age_filter(user_id, age_input)
+        bot.send_message(user_id, f"Возрастной фильтр установлен: {age_input}")
+        show_filter_settings(message)
+    else:
+        bot.send_message(
+            user_id,
+            "Некорректный формат. Укажите возраст в формате '20' или '20 - 30'.",
+        )
+
+
+# Обработчик для кнопки "Изменить поиск города"
+@bot.callback_query_handler(func=lambda call: call.data == "change_city_filter")
+def change_city_filter(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_CHANGE_CITY_FILTER)
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+    bot.send_message(
+        user_id, "Уточните город собеседника для поиска. Введите название города."
+    )
+
+
+@bot.message_handler(
+    func=lambda message: database_manager.get_user_state(message.from_user.id)
+    == STATE_CHANGE_CITY_FILTER
+)
+def set_city_filter_handler(message):
+    user_id = message.from_user.id
+    city_input = message.text.strip()
+
+    if validate_city_input(city_input):
+        database_manager.set_city_filter(user_id, city_input)
+        bot.send_message(user_id, f"Фильтр по городу установлен: {city_input}")
+        show_filter_settings(message)
+    else:
+        bot.send_message(user_id, "Некорректный формат. Укажите название города.")
+
+
+def validate_age_input(age_input):
+    if age_input.isdigit():
+        return True
+    elif "-" in age_input:
+        age_range = age_input.split("-")
+        if len(age_range) == 2 and all(part.strip().isdigit() for part in age_range):
+            return True
+    return False
+
+
+def validate_city_input(city_input):
+    return city_input.isalpha()
+
+
+def show_filter_settings(message):
+    user_id = message.from_user.id
+    filter_settings_data = messages["filter_settings_message"]
+    img_url = filter_settings_data["image_url"]
+    message_text = filter_settings_data["text"].format(
+        age=database_manager.get_age_filter(user_id),
+        city=database_manager.get_city_filter(user_id),
+    )
+    button_text_age = filter_settings_data["button_text_age"]
+    button_text_city = filter_settings_data["button_text_city"]
+    button_text_back = filter_settings_data["button_text_back"]
+    button_text_reset = filter_settings_data["button_text_reset_settings"]
+
+    markup = types.InlineKeyboardMarkup()
+    markup.row(
+        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter"),
+        types.InlineKeyboardButton(
+            button_text_city, callback_data="change_city_filter"
+        ),
+        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings"),
+    )
+    markup.row(
+        types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu")
+    )
+
+    bot.send_photo(
+        chat_id=message.chat.id,
+        photo=img_url,
+        caption=message_text,
+        reply_markup=markup,
+    )
+
+
+# Обработчик для кнопки "Сброс настроек"
+@bot.callback_query_handler(func=lambda call: call.data == "reset_settings")
+def reset_settings(call):
+    user_id = call.from_user.id
+
+    # Удаляем фильтры из базы данных (предполагаем, что set_age_filter и set_city_filter удаляют запись, если передать None)
+    database_manager.set_age_filter(user_id, None)
+    database_manager.set_city_filter(user_id, None)
+
+    # Уведомляем пользователя о сбросе настроек
+    # bot.send_message(chat_id=call.message.chat.id, text="Настройки фильтров были сброшены до изначальных значений.")
+
+    # Возвращаемся в меню настроек, чтобы пользователь видел обновленные значения
+    filter_settings(call)
 
 
 if __name__ == "__main__":
