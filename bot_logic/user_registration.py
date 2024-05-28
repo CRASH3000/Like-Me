@@ -1,5 +1,6 @@
 from telebot import types
 from data_messages import messages
+from compatibility_constant import ALL_ZODIAC
 
 
 # Обработчик для кнопки регистрации
@@ -26,10 +27,10 @@ def age_input(message, bot, database_manager, set_state, STATE_ASK_CONSENT):
         age = int(message.text)
         if age < 1 or age > 110:
             error_text = messages["age_input_message"]["error_text_age_over_110"]
-            bot.send_message(message.chat.id, error_text)
+            bot.send_message(message.chat.id, error_text, parse_mode="HTML")
         elif age < 16:
             error_text = messages["age_input_message"]["error_text_age_under_16"]
-            bot.send_message(message.chat.id, error_text)
+            bot.send_message(message.chat.id, error_text, parse_mode="HTML")
             database_manager.delete_user(user_id)  # Удаление пользователя из БД
             set_state(user_id, None)
         else:
@@ -125,6 +126,7 @@ def city_request(call, bot, database_manager, set_state, STATE_ENTER_CITY):
         message_id=call.message.message_id,
         text=message_text,
         reply_markup=None,
+        parse_mode="HTML",
     )
 
 
@@ -138,17 +140,45 @@ def descriptions_request(message, bot, database_manager, set_state, STATE_DESCRI
     bot.send_message(message.chat.id, message_text, parse_mode="HTML")
 
 
-def status_selection(message, bot, database_manager, set_state, STATE_CHOOSE_STATUS):
+def zodiac_request(message, bot, database_manager, set_state, STATE_ZODIAC):
+    """обработчик зз
+
+    Args:
+        message (_type_): _description_
+        bot (_type_): _description_
+        database_manager (_type_): _description_
+        set_state (_type_): _description_
+        STATE_ZODIAC (_type_): _description_
+    """
     user_id = message.from_user.id
     descriptions = message.text
     database_manager.update_user(user_id, descriptions=descriptions)
-    set_state(message.from_user.id, STATE_CHOOSE_STATUS)
+    markup_status = types.InlineKeyboardMarkup()
+
+    set_state(message.from_user.id, STATE_ZODIAC)
+    for zodiac in ALL_ZODIAC:
+        btn = types.InlineKeyboardButton(zodiac, callback_data=zodiac)
+        markup_status.add(btn)
+
+    message_text = "Выбери свой знак зодиака"
+    bot.send_message(
+        message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+    )
+
+
+def status_selection(call, bot, database_manager, set_state, STATE_CHOOSE_STATUS):
+    user_id = call.from_user.id
+    zodiac_text = call.data
+    database_manager.update_user(user_id, zodiac=zodiac_text)
+
+    set_state(user_id, STATE_CHOOSE_STATUS)
 
     ask_status_data = messages["ask_status_message"]
     message_text = ask_status_data["text"]
     button_status_1 = ask_status_data["button_text_status_1"]
     button_status_2 = ask_status_data["button_text_status_2"]
     button_status_3 = ask_status_data["button_text_status_3"]
+    button_status_4 = ask_status_data["button_text_status_4"]
 
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
@@ -157,11 +187,17 @@ def status_selection(message, bot, database_manager, set_state, STATE_CHOOSE_STA
         ),
         types.InlineKeyboardButton(button_status_2, callback_data="status_find_love"),
         types.InlineKeyboardButton(button_status_3, callback_data="status_just_chat"),
+        types.InlineKeyboardButton(button_status_4, callback_data="status_business"),
     ]
     for button in buttons:
         markup_status.add(button)
-    bot.send_message(
-        message.chat.id, message_text, reply_markup=markup_status, parse_mode="HTML"
+
+    bot.answer_callback_query(call.id)  # подтверждение получения callback
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text=message_text,
+        reply_markup=markup_status,
     )
 
 
@@ -170,6 +206,7 @@ def get_status_text(callback_data):
         "status_find_friends": "Найти друзей",
         "status_find_love": "Найти вторую половинку",
         "status_just_chat": "Просто пообщаться",
+        "status_business": "Найти коллегу или наставника",
     }
     # Получаем ключ статуса (например, 'find_friends') и возвращаем соответствующий текст
     return statuses.get(callback_data, "Неизвестный статус")

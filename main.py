@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
+from compatibility_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
+import json
+import re
 
 load_dotenv()
 
@@ -15,6 +18,9 @@ if API_TOKEN is None:
     print("Ошибка: Токен API не найден.")
 else:
     print("Токен API успешно загружен")
+
+with open("compatibility.json", "r", encoding="utf-8") as compatibility_json:
+    compatibility = json.load(compatibility_json)
 
 USER_DATA = {}  # Словарь для хранения данных пользователей
 
@@ -46,6 +52,18 @@ STATE_WAITING_FOR_PHOTO_UPDATE = 24
 STATE_PHOTO_UPDATE_COMPLETE = 25
 STATE_WAITING_FOR_PHOTO = 26
 STATE_SEARCHING = 27
+STATE_FILTER_SETTINGS = 28
+STATE_CHANGE_AGE_FILTER = 29
+STATE_CHANGE_CITY_FILTER = 30
+STATE_ZODIAC = 31
+
+
+def get_compatibility(user_gender, user_zodiac, partner_zodiac):
+    return (
+        compatibility.get(user_gender.upper())
+        .get(user_zodiac.upper())
+        .get(partner_zodiac.upper())
+    )
 
 
 # Функция для обновления состояния пользователя
@@ -79,7 +97,7 @@ def ask_age(call):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_ASK_AGE
 )
-def ask_age(message):
+def ask_age_handler(message):
     user_registration.age_input(
         message, bot, database_manager, set_state, STATE_ASK_CONSENT
     )
@@ -128,6 +146,18 @@ def ask_descriptions(message):
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id) == STATE_DESCRIPTIONS
 )
+def ask_zodiac(message):
+    """указываем знак зодиака при регистрации
+
+    Args:
+        message (_type_): _description_
+    """
+    user_registration.zodiac_request(
+        message, bot, database_manager, set_state, STATE_ZODIAC
+    )
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ALL_ZODIAC)
 def ask_status(message):
     user_registration.status_selection(
         message, bot, database_manager, set_state, STATE_CHOOSE_STATUS
@@ -136,7 +166,12 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends", "status_find_love", "status_just_chat"]
+    in [
+        "status_find_friends",
+        "status_find_love",
+        "status_just_chat",
+        "status_business",
+    ]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -182,7 +217,8 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
+                f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -233,7 +269,7 @@ def edit_name_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PROFILE_UPDATE
+    == STATE_WAITING_FOR_PROFILE_UPDATE
 )
 def update_name_callback(message):
     profile_editing.update_name(message)
@@ -251,7 +287,7 @@ def edit_descriptions_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+    == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
 )
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
@@ -267,7 +303,7 @@ def edit_status_callback(call):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+    in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
 )
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
@@ -281,7 +317,7 @@ def edit_city_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_CITY_UPDATE
+    == STATE_WAITING_FOR_CITY_UPDATE
 )
 def update_city_callback(message):
     profile_editing.update_city(message)
@@ -298,7 +334,7 @@ def edit_photo_callback(call):
 @bot.message_handler(
     content_types=["photo"],
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PHOTO_UPDATE,
+    == STATE_WAITING_FOR_PHOTO_UPDATE,
 )
 def update_photo_callback(message):
     profile_editing.update_photo(message)
@@ -364,21 +400,25 @@ def main_screen(call):
     button_text_start_searching = main_screen_data["button_text_start_searching"]
     button_text_profile = main_screen_data["button_text_profile"]
     button_text_about = main_screen_data["button_text_about"]
+    button_text_settings = main_screen_data["button_text_settings"]
     button_text_my_friends = main_screen_data["button_text_my_friends"]
 
     markup_main_buttons = types.InlineKeyboardMarkup()
+    # С помощью метода .row() можно сделать одну большую кнопку
     markup_main_buttons.row(
         types.InlineKeyboardButton(
             button_text_start_searching, callback_data="start_searching"
         )
     )
-    markup_main_buttons.row(
+
+    markup_main_buttons.add(
         types.InlineKeyboardButton(
             button_text_my_friends, callback_data="show_friends"
-        )
+        ),
+        types.InlineKeyboardButton(
+            button_text_settings, callback_data="filter_settings"
+        ),
     )
-    # С помощью метода .row() можно сделать одну большую кнопку
-
     markup_main_buttons.add(
         types.InlineKeyboardButton(button_text_profile, callback_data="show_profile"),
         types.InlineKeyboardButton(button_text_about, callback_data="about_project"),
@@ -439,12 +479,18 @@ def start_searching(call):
         reply_markup.row(
             types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
         )
-
+        current_user_gender = user_data[GENDER_IDX]
+        current_user_zodiac = user_data[ZODIAC_IDX]
+        profile_user_zodiac = user_profile[ZODIAC_IDX]
+        current_compatibility = get_compatibility(
+            current_user_gender, current_user_zodiac, profile_user_zodiac
+        )
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_profile[6],
                 caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}",
+                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
+                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -483,10 +529,10 @@ def handle_like(call):
 
     database_manager.add_like(user_id, liked_user_id)
     send_temporary_confirmation(user_id, "Ваш лайк успешно отправлен!")
+    liked_user_data = database_manager.get_user(liked_user_id)
 
     if check_mutual_like(user_id, liked_user_id):
         user_data = database_manager.get_user(user_id)
-        liked_user_data = database_manager.get_user(liked_user_id)
         if user_data and liked_user_data:
             send_temporary_confirmation(
                 user_id,
@@ -501,6 +547,13 @@ def handle_like(call):
 
     elif database_manager.get_user_state(liked_user_id) == STATE_MAIN_SCREEN:
         user_data = database_manager.get_user(user_id)
+        liked_user_gender = liked_user_data[GENDER_IDX]
+        liked_user_zodiac = liked_user_data[ZODIAC_IDX]
+        user_zodiac = user_data[ZODIAC_IDX]
+
+        current_compatibility = get_compatibility(
+            liked_user_gender, liked_user_zodiac, user_zodiac
+        )
         if user_data:
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
@@ -510,13 +563,13 @@ def handle_like(call):
                 )
             )
             reply_markup.add(
-                types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+                types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{user_id}")
             )
             bot.send_photo(
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}\nВаша совместимость: {current_compatibility}",
                 reply_markup=reply_markup,
             )
 
@@ -539,11 +592,17 @@ def handle_like(call):
                 )
             )
 
+            next_user_compatibility = get_compatibility(
+                user_gender=user_data[GENDER_IDX],
+                user_zodiac=user_data[ZODIAC_IDX],
+                partner_zodiac=next_user_data[ZODIAC_IDX],
+            )
             bot.edit_message_media(
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"
+                    f"\nЗнак зодиака: {next_user_data[ZODIAC_IDX]}\nВаша совместимость: {next_user_compatibility}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -578,9 +637,14 @@ def check_mutual_like(user_id, liked_user_id):
 
 def notify_likes(user_id):
     likers = database_manager.get_likers(user_id)
+    current_user = database_manager.get_user(user_id)
+    if current_user:
+        current_gender = current_user[GENDER_IDX]
+        current_zodiac = current_user[ZODIAC_IDX]
+
     for liker_id in likers:
         liker_data = database_manager.get_user(liker_id)
-
+        liked_zodiac = liker_data[ZODIAC_IDX]
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
             types.InlineKeyboardButton(
@@ -588,14 +652,19 @@ def notify_likes(user_id):
             )
         )
         reply_markup.add(
-            types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+            types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{liker_id}")
+        )
+        current_compatibility = get_compatibility(
+            current_gender, current_zodiac, liked_zodiac
+        )
+        caption = (
+            f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}\nВаша совместимость: {current_compatibility}\n",
         )
 
         bot.send_photo(
             chat_id=user_id,
             photo=liker_data[6],
-            caption=f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}"
-                    f"\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}",
+            caption=caption,
             reply_markup=reply_markup,
         )
 
@@ -636,13 +705,21 @@ def restart_searching(call):
 
 def send_temporary_confirmation(user_id, message_text):
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("ОК", callback_data="decline_"))
+    markup.add(types.InlineKeyboardButton("ОК", callback_data="delete_message"))
     bot.send_message(user_id, message_text, reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "delete_message")
+def delete_message(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("decline_"))
 def handle_decline(call):
-    # Удаляем сообщение с предложением
+    user_id = call.from_user.id
+    liked_user_id = int(call.data.split("_")[1])
+
+    database_manager.remove_like(liked_user_id, user_id)
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
@@ -659,6 +736,174 @@ def view_friends(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_friend_"))
 def delete_friend(call):
     add_friends.delete_friend(call, bot, database_manager)
+
+
+# Обработчик для кнопки "Настройки"
+@bot.callback_query_handler(func=lambda call: call.data == "filter_settings")
+def filter_settings(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_FILTER_SETTINGS)
+
+    filter_settings_data = messages["filter_settings_message"]
+    img_url = filter_settings_data["image_url"]
+    message_text = filter_settings_data["text"].format(
+        age=database_manager.get_age_filter(user_id),
+        city=database_manager.get_city_filter(user_id),
+    )
+    button_text_age = filter_settings_data["button_text_age"]
+    button_text_city = filter_settings_data["button_text_city"]
+    button_text_back = filter_settings_data["button_text_back"]
+    button_text_reset = filter_settings_data["button_text_reset_settings"]
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu")
+    )
+
+    bot.edit_message_media(
+        media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        reply_markup=markup,
+    )
+
+
+# Обработчик для кнопки "Изменить поиск возраста"
+@bot.callback_query_handler(func=lambda call: call.data == "change_age_filter")
+def change_age_filter(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_CHANGE_AGE_FILTER)
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+    bot.send_message(
+        user_id,
+        "Уточните возраст собеседника для поиска. Вы можете искать людей одного возраста написав например 20 или указать возрастной лимит, например 20 - 30",
+    )
+
+
+@bot.message_handler(
+    func=lambda message: database_manager.get_user_state(message.from_user.id)
+    == STATE_CHANGE_AGE_FILTER
+)
+def set_age_filter_handler(message):
+    user_id = message.from_user.id
+    age_input = message.text.strip()
+
+    if validate_age_input(age_input):
+        database_manager.set_age_filter(user_id, age_input)
+        bot.send_message(user_id, f"Возрастной фильтр установлен: {age_input}")
+        show_filter_settings(message)
+    else:
+        bot.send_message(
+            user_id,
+            "Некорректный формат. Укажите возраст в формате '20' или '20 - 30'.",
+        )
+
+
+# Обработчик для кнопки "Изменить поиск города"
+@bot.callback_query_handler(func=lambda call: call.data == "change_city_filter")
+def change_city_filter(call):
+    user_id = call.from_user.id
+    database_manager.set_state(user_id, STATE_CHANGE_CITY_FILTER)
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+    bot.send_message(
+        user_id, "Уточните город собеседника для поиска. Введите название города."
+    )
+
+
+@bot.message_handler(
+    func=lambda message: database_manager.get_user_state(message.from_user.id)
+    == STATE_CHANGE_CITY_FILTER
+)
+def set_city_filter_handler(message):
+    user_id = message.from_user.id
+    city_input = message.text.strip()
+
+    if validate_city_input(city_input):
+        database_manager.set_city_filter(user_id, city_input)
+        bot.send_message(user_id, f"Фильтр по городу установлен: {city_input}")
+        show_filter_settings(message)
+    else:
+        bot.send_message(user_id, "Некорректный формат. Укажите название города.")
+
+
+def validate_age_input(age_input):
+    if len(age_input) > 6:
+        return False
+
+    if age_input.isdigit():
+        return int(age_input) <= 200
+    elif "-" in age_input:
+        age_range = age_input.split("-")
+        if len(age_range) == 2 and all(part.strip().isdigit() for part in age_range):
+            return int(age_range[0]) <= 200 and int(age_range[1]) <= 200
+    return False
+
+
+def validate_city_input(city_input):
+    # Проверка на наличие только букв, цифр, пробелов и тире
+    # и ограничение на длину до 30 символов
+    return bool(re.match("^[a-zA-Zа-яА-Я0-9\\s-]{1,30}$", city_input))
+
+
+def show_filter_settings(message):
+    user_id = message.from_user.id
+    filter_settings_data = messages["filter_settings_message"]
+    img_url = filter_settings_data["image_url"]
+    message_text = filter_settings_data["text"].format(
+        age=database_manager.get_age_filter(user_id),
+        city=database_manager.get_city_filter(user_id),
+    )
+    button_text_age = filter_settings_data["button_text_age"]
+    button_text_city = filter_settings_data["button_text_city"]
+    button_text_back = filter_settings_data["button_text_back"]
+    button_text_reset = filter_settings_data["button_text_reset_settings"]
+
+    markup = types.InlineKeyboardMarkup()
+    markup.add(
+        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu")
+    )
+
+    bot.send_photo(
+        chat_id=message.chat.id,
+        photo=img_url,
+        caption=message_text,
+        reply_markup=markup,
+        parse_mode="HTML",
+    )
+
+
+# Обработчик для кнопки "Сброс настроек"
+@bot.callback_query_handler(func=lambda call: call.data == "reset_settings")
+def reset_settings(call):
+    user_id = call.from_user.id
+
+    # Удаляем фильтры из базы данных (предполагаем, что set_age_filter и set_city_filter удаляют запись, если передать None)
+    database_manager.set_age_filter(user_id, None)
+    database_manager.set_city_filter(user_id, None)
+
+    # Уведомляем пользователя о сбросе настроек
+    # bot.send_message(chat_id=call.message.chat.id, text="Настройки фильтров были сброшены до изначальных значений.")
+
+    # Возвращаемся в меню настроек, чтобы пользователь видел обновленные значения
+    filter_settings(call)
 
 
 if __name__ == "__main__":
