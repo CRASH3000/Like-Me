@@ -97,7 +97,8 @@ messages = {
     },
     "filter_settings_message": {
         "image_url": "https://telegra.ph/file/ad7079ce8110af0f35771.png",
-        "text": "Настройки поиска\nВозраст - {age}\nГород - {city}",
+        "text": "⚙️ Настройки поиска"
+                "\n  • <b>Возраст:</b> {age}\n  • <b>Город:</b> {city}",
         "button_text_age": "Изменить поиск возраста",
         "button_text_city": "Изменить поиск города",
         "button_text_reset_settings": "Сбросить настройки",
