@@ -25,7 +25,8 @@
 
     ```bash
     git clone https://github.com/CRASH3000/Like-Me.git
-    
+   ```
+    ```bash 
    cd Like-Me
    ```
 
@@ -33,11 +34,15 @@
 * **Windows**
   ```bash
    python -m venv venv
+    ```
+  ```bash
    venv\Scripts\activate
     ```
 * **macOS и Linux**
   ```bash
    python3 -m venv venv
+    ```
+  ```bash
    source venv/bin/activate
     ```
 3. Установка библиотек для работы с проектом:

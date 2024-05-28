@@ -14,26 +14,28 @@ def command_start(message, bot, database_manager, STATE_MAIN_SCREEN):
         button_text_start_searching = main_screen_data["button_text_start_searching"]
         button_text_profile = main_screen_data["button_text_profile"]
         button_text_about = main_screen_data["button_text_about"]
+        button_text_settings = main_screen_data["button_text_settings"]
         button_text_my_friends = main_screen_data["button_text_my_friends"]
 
         markup_main_buttons = types.InlineKeyboardMarkup()
+        # С помощью метода .row() можно сделать одну большую кнопку
         markup_main_buttons.row(
             types.InlineKeyboardButton(
                 button_text_start_searching, callback_data="start_searching"
             )
         )
-        markup_main_buttons.row(
-            types.InlineKeyboardButton(
-                button_text_my_friends, callback_data="show_friends"
-            )
-        )
+
         markup_main_buttons.add(
             types.InlineKeyboardButton(
-                button_text_profile, callback_data="show_profile"
+                button_text_my_friends, callback_data="show_friends"
             ),
             types.InlineKeyboardButton(
-                button_text_about, callback_data="about_project"
+                button_text_settings, callback_data="filter_settings"
             ),
+        )
+        markup_main_buttons.add(
+            types.InlineKeyboardButton(button_text_profile, callback_data="show_profile"),
+            types.InlineKeyboardButton(button_text_about, callback_data="about_project"),
         )
 
         bot.send_photo(
