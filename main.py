@@ -166,12 +166,12 @@ def ask_status(message):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in [
-                          "status_find_friends",
-                          "status_find_love",
-                          "status_just_chat",
-                          "status_business",
-                      ]
+    in [
+        "status_find_friends",
+        "status_find_love",
+        "status_just_chat",
+        "status_business",
+    ]
 )
 def ask_photo(call):
     user_registration.sending_photo(
@@ -217,8 +217,8 @@ def show_profile(call):
             media=types.InputMediaPhoto(
                 user_data[6],
                 caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
-                        f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
+                f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -269,7 +269,7 @@ def edit_name_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PROFILE_UPDATE
+    == STATE_WAITING_FOR_PROFILE_UPDATE
 )
 def update_name_callback(message):
     profile_editing.update_name(message)
@@ -287,7 +287,7 @@ def edit_descriptions_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
+    == STATE_WAITING_FOR_DESCRIPTIONS_UPDATE
 )
 def update_descriptions_callback(message):
     profile_editing.update_descriptions(message)
@@ -303,7 +303,7 @@ def edit_status_callback(call):
 
 @bot.callback_query_handler(
     func=lambda call: call.data
-                      in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
+    in ["status_find_friends_1", "status_find_love_2", "status_just_chat_3"]
 )
 def update_status_callback(call):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
@@ -317,7 +317,7 @@ def edit_city_callback(call):
 
 @bot.message_handler(
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_CITY_UPDATE
+    == STATE_WAITING_FOR_CITY_UPDATE
 )
 def update_city_callback(message):
     profile_editing.update_city(message)
@@ -334,7 +334,7 @@ def edit_photo_callback(call):
 @bot.message_handler(
     content_types=["photo"],
     func=lambda message: get_state(message.from_user.id)
-                         == STATE_WAITING_FOR_PHOTO_UPDATE,
+    == STATE_WAITING_FOR_PHOTO_UPDATE,
 )
 def update_photo_callback(message):
     profile_editing.update_photo(message)
@@ -489,8 +489,8 @@ def start_searching(call):
             media=types.InputMediaPhoto(
                 user_profile[6],
                 caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                        f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
-                        f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
+                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
+                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -569,7 +569,7 @@ def handle_like(call):
                 chat_id=liked_user_id,
                 photo=user_data[6],
                 caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                        f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}\nВаша совместимость: {current_compatibility}",
+                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}\nВаша совместимость: {current_compatibility}",
                 reply_markup=reply_markup,
             )
 
@@ -592,11 +592,17 @@ def handle_like(call):
                 )
             )
 
+            next_user_compatibility = get_compatibility(
+                user_gender=user_data[GENDER_IDX],
+                user_zodiac=user_data[ZODIAC_IDX],
+                partner_zodiac=next_user_data[ZODIAC_IDX],
+            )
             bot.edit_message_media(
                 media=types.InputMediaPhoto(
                     next_user_data[6],
                     caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                            f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}",
+                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"
+                    f"\nЗнак зодиака: {next_user_data[ZODIAC_IDX]}\nВаша совместимость: {next_user_compatibility}",
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -785,7 +791,7 @@ def change_age_filter(call):
 
 @bot.message_handler(
     func=lambda message: database_manager.get_user_state(message.from_user.id)
-                         == STATE_CHANGE_AGE_FILTER
+    == STATE_CHANGE_AGE_FILTER
 )
 def set_age_filter_handler(message):
     user_id = message.from_user.id
@@ -815,7 +821,7 @@ def change_city_filter(call):
 
 @bot.message_handler(
     func=lambda message: database_manager.get_user_state(message.from_user.id)
-                         == STATE_CHANGE_CITY_FILTER
+    == STATE_CHANGE_CITY_FILTER
 )
 def set_city_filter_handler(message):
     user_id = message.from_user.id
