@@ -27,7 +27,7 @@ def create_table():
             state INTEGER,
             telegram_username TEXT,
             zodiac TEXT,
-            age_filter INTEGER,
+            age_filter TEXT,
             city_filter TEXT
         )
     """
@@ -511,22 +511,17 @@ def get_city_filter(user_id):
     return city_filter[0] if city_filter and city_filter[0] else "по умолчанию"
 
 
-# функция для фильтрации анкет в соответствии с заданными критериями (пол пользователя)
-# def filter_profiles(STATE_PROFILE):
-# conn = sqlite3.connect("users_database.db")
-# cursor = conn.cursor()
 
-# cursor.execute("SELECT * FROM users WHERE gender != ? AND status = ?", (STATE_PROFILE,))
-# filtered_profiles = cursor.fetchall()
-
-# conn.close()
-
-# return filtered_profiles
-
-
-#  функцию фильтрации для выбора соответствующих анкет.
-
-# filtered_profiles = filter_profiles(STATE_PROFILE)
-
-# for profile in filtered_profiles:
-# print(profile)
+def remove_like(user_id, liked_user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM likes WHERE user_id=? AND liked_user_id=?",
+            (user_id, liked_user_id),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Ошибка при удалении лайка: {e}")
+    finally:
+        conn.close()

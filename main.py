@@ -7,6 +7,7 @@ from data_messages import messages
 from bot_logic import profile_editing, user_registration, start_bot, add_friends
 from compatibility_constant import ALL_ZODIAC, GENDER_IDX, ZODIAC_IDX
 import json
+import re
 
 load_dotenv()
 
@@ -562,7 +563,7 @@ def handle_like(call):
                 )
             )
             reply_markup.add(
-                types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+                types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{user_id}")
             )
             bot.send_photo(
                 chat_id=liked_user_id,
@@ -651,7 +652,7 @@ def notify_likes(user_id):
             )
         )
         reply_markup.add(
-            types.InlineKeyboardButton("Неинтересно", callback_data="decline_")
+            types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{liker_id}")
         )
         current_compatibility = get_compatibility(
             current_gender, current_zodiac, liked_zodiac
@@ -704,13 +705,21 @@ def restart_searching(call):
 
 def send_temporary_confirmation(user_id, message_text):
     markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("ОК", callback_data="decline_"))
+    markup.add(types.InlineKeyboardButton("ОК", callback_data="delete_message"))
     bot.send_message(user_id, message_text, reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: call.data == "delete_message")
+def delete_message(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("decline_"))
 def handle_decline(call):
-    # Удаляем сообщение с предложением
+    user_id = call.from_user.id
+    liked_user_id = int(call.data.split("_")[1])
+
+    database_manager.remove_like(liked_user_id, user_id)
     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
@@ -744,7 +753,7 @@ def filter_settings(call):
     button_text_age = filter_settings_data["button_text_age"]
     button_text_city = filter_settings_data["button_text_city"]
     button_text_back = filter_settings_data["button_text_back"]
-    button_text_reset = "Сброс настроек"
+    button_text_reset = filter_settings_data["button_text_reset_settings"]
 
     markup = types.InlineKeyboardMarkup()
     markup.add(
@@ -761,7 +770,7 @@ def filter_settings(call):
     )
 
     bot.edit_message_media(
-        media=types.InputMediaPhoto(img_url, caption=message_text),
+        media=types.InputMediaPhoto(img_url, caption=message_text, parse_mode="HTML"),
         chat_id=call.message.chat.id,
         message_id=call.message.message_id,
         reply_markup=markup,
@@ -827,17 +836,22 @@ def set_city_filter_handler(message):
 
 
 def validate_age_input(age_input):
+    if len(age_input) > 6:
+        return False
+
     if age_input.isdigit():
-        return True
+        return int(age_input) <= 200
     elif "-" in age_input:
         age_range = age_input.split("-")
         if len(age_range) == 2 and all(part.strip().isdigit() for part in age_range):
-            return True
+            return int(age_range[0]) <= 200 and int(age_range[1]) <= 200
     return False
 
 
 def validate_city_input(city_input):
-    return city_input.isalpha()
+    # Проверка на наличие только букв, цифр, пробелов и тире
+    # и ограничение на длину до 30 символов
+    return bool(re.match("^[a-zA-Zа-яА-Я0-9\\s-]{1,30}$", city_input))
 
 
 def show_filter_settings(message):
@@ -854,14 +868,16 @@ def show_filter_settings(message):
     button_text_reset = filter_settings_data["button_text_reset_settings"]
 
     markup = types.InlineKeyboardMarkup()
-    markup.row(
-        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter"),
-        types.InlineKeyboardButton(
-            button_text_city, callback_data="change_city_filter"
-        ),
-        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings"),
+    markup.add(
+        types.InlineKeyboardButton(button_text_age, callback_data="change_age_filter")
     )
-    markup.row(
+    markup.add(
+        types.InlineKeyboardButton(button_text_city, callback_data="change_city_filter")
+    )
+    markup.add(
+        types.InlineKeyboardButton(button_text_reset, callback_data="reset_settings")
+    )
+    markup.add(
         types.InlineKeyboardButton(button_text_back, callback_data="go_to_main_menu")
     )
 
@@ -870,6 +886,7 @@ def show_filter_settings(message):
         photo=img_url,
         caption=message_text,
         reply_markup=markup,
+        parse_mode="HTML",
     )
 
 
