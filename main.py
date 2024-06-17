@@ -216,9 +216,10 @@ def show_profile(call):
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_data[6],
-                caption=f"Ваша анкета:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}"
-                f"\nЗнак зодиака: {user_data[ZODIAC_IDX]}",
+                caption=f"<b>''ВАША АНКЕТА''</b>\n--------------------------------------------------------"
+                        f" \nИМЯ:  {user_data[1]}\nПОЛ:  {user_data[7]}\nГОРОД:  {user_data[2]}"
+                f"\nОПИСАНИЕ:  {user_data[4]}\nЦЕЛЬ ОБЩЕНИЯ:  {user_data[5]}\nВОЗРАСТ:  {user_data[3]}"
+                f"\nЗНАК ЗОДИАКА: {user_data[ZODIAC_IDX]}", parse_mode="HTML"
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -463,7 +464,7 @@ def start_searching(call):
         user_id, user_status
     )  # Получаем следующего пользователя из базы данных
     main_screen_data = messages["main_screen_message"]
-    img_url = main_screen_data["image_url"]
+    img_url = main_screen_data["image_url_no_profiles"]
     set_state(user_id, STATE_SEARCHING)
 
     if user_profile:
@@ -473,8 +474,8 @@ def start_searching(call):
 
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
-            types.InlineKeyboardButton("Да", callback_data=f"like_{user_profile[0]}"),
-            types.InlineKeyboardButton("Нет", callback_data="next_profile"),
+            types.InlineKeyboardButton("💜 Да", callback_data=f"like_{user_profile[0]}"),
+            types.InlineKeyboardButton("😈 Нет", callback_data="next_profile"),
         )
         reply_markup.row(
             types.InlineKeyboardButton("Все, хватит", callback_data="go_to_main_menu")
@@ -488,9 +489,10 @@ def start_searching(call):
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_profile[6],
-                caption=f"Хотите познакомится?\nИмя: {user_profile[1]}\nПол: {user_profile[7]}\nГород: {user_profile[2]}"
-                f"\nОписание: {user_profile[4]}\nЦель общения: {user_profile[5]}\nВозраст: {user_profile[3]}"
-                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nСовместимость: {current_compatibility}",
+                caption=f"<b>Хотите познакомится?</b>\nИМЯ: {user_profile[1]}\nПОЛ: {user_profile[7]}\nГОРОД: {user_profile[2]}"
+                f"\nОПИСАНИЕ: {user_profile[4]}\nЦЕЛЬ ОБЩЕНИЯ: {user_profile[5]}\nВОЗРАСТ: {user_profile[3]}"
+                f"\nЗнак зодиака: {user_profile[ZODIAC_IDX]}\nВАША СОВМЕСТИМОСТЬ: {current_compatibility}",
+                parse_mode="HTML"
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
@@ -507,7 +509,11 @@ def start_searching(call):
             ),
         )
         bot.edit_message_media(
-            media=types.InputMediaPhoto(img_url, caption="Нет доступных анкет"),
+            media=types.InputMediaPhoto(img_url, caption="👻 Кажется ты посмотрел все доступные анкеты."
+                                                         "\n Ты можешь повторно посмотреть анкеты или вернуться "
+                                                         "в главное меню."
+                                                         "\n\n Кроме этого можешь попробовать поменять свой статус "
+                                                         "и настроить фильтры для изменения поиска"),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
             reply_markup=reply_markup,
@@ -536,12 +542,12 @@ def handle_like(call):
         if user_data and liked_user_data:
             send_temporary_confirmation(
                 user_id,
-                f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. "
+                f"👻 Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. "
                 f"Начните общение: @{liked_user_data[9]}",
             )
             send_temporary_confirmation(
                 liked_user_id,
-                f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
+                f"👻 Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
             )
             database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)
 
@@ -558,19 +564,19 @@ def handle_like(call):
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
                 types.InlineKeyboardButton(
-                    "Лайкнуть в ответ",
+                    "💜 Лайкнуть в ответ",
                     callback_data=f"accept_{user_id}_{liked_user_id}",
                 )
             )
             reply_markup.add(
-                types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{user_id}")
+                types.InlineKeyboardButton("😈 Неинтересно", callback_data=f"decline_{user_id}")
             )
             bot.send_photo(
                 chat_id=liked_user_id,
                 photo=user_data[6],
-                caption=f"Вами заинтересовались!\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}\nВаша совместимость: {current_compatibility}",
-                reply_markup=reply_markup,
+                caption=f"✉️ <b>Вами заинтересовались!</b>\nИМЯ: {user_data[1]}\nПОЛ: {user_data[7]}\nГОРОД: {user_data[2]}"
+                f"\nОПИСАНИЕ: {user_data[4]}\nЦЕЛЬ ОБЩЕНИЯ: {user_data[5]}\nВОЗРАСТ: {user_data[3]}\nВАША СОВМЕСТИМОСТЬ: {current_compatibility}",
+                reply_markup=reply_markup, parse_mode="HTML"
             )
 
     try:
@@ -582,9 +588,9 @@ def handle_like(call):
             reply_markup = types.InlineKeyboardMarkup()
             reply_markup.add(
                 types.InlineKeyboardButton(
-                    "Да", callback_data=f"like_{next_user_data[0]}"
+                    "💜 Да", callback_data=f"like_{next_user_data[0]}"
                 ),
-                types.InlineKeyboardButton("Нет", callback_data="next_profile"),
+                types.InlineKeyboardButton("😈 Нет", callback_data="next_profile"),
             )
             reply_markup.row(
                 types.InlineKeyboardButton(
@@ -600,9 +606,10 @@ def handle_like(call):
             bot.edit_message_media(
                 media=types.InputMediaPhoto(
                     next_user_data[6],
-                    caption=f"Хотите познакомится?\nИмя: {next_user_data[1]}\nПол: {next_user_data[7]}\nГород: {next_user_data[2]}"
-                    f"\nОписание: {next_user_data[4]}\nЦель общения: {next_user_data[5]}\nВозраст: {next_user_data[3]}"
-                    f"\nЗнак зодиака: {next_user_data[ZODIAC_IDX]}\nВаша совместимость: {next_user_compatibility}",
+                    caption=f"👻 <b>Хотите познакомится?</b>\nИМЯ: {next_user_data[1]}\nПОЛ: {next_user_data[7]}\nГОРОД: {next_user_data[2]}"
+                    f"\nОПИСАНИЕ: {next_user_data[4]}\nЦЕЛЬ ОБЩЕНИЯ: {next_user_data[5]}\nВОЗРАСТ: {next_user_data[3]}"
+                    f"\nЗНАК ЗОДИАКА: {next_user_data[ZODIAC_IDX]}\nВАША СОВМЕСТИМОСТЬ: {next_user_compatibility}",
+                    parse_mode="HTML"
                 ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
@@ -648,17 +655,19 @@ def notify_likes(user_id):
         reply_markup = types.InlineKeyboardMarkup()
         reply_markup.add(
             types.InlineKeyboardButton(
-                "Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"
+                "💜 Лайкнуть в ответ", callback_data=f"accept_{user_id}_{liker_id}"
             )
         )
         reply_markup.add(
-            types.InlineKeyboardButton("Неинтересно", callback_data=f"decline_{liker_id}")
+            types.InlineKeyboardButton("😈 Неинтересно", callback_data=f"decline_{liker_id}")
         )
         current_compatibility = get_compatibility(
             current_gender, current_zodiac, liked_zodiac
         )
         caption = (
-            f"Вами заинтересовались!\nИмя: {liker_data[1]}\nПол: {liker_data[7]}\nГород: {liker_data[2]}\nОписание: {liker_data[4]}\nЦель общения: {liker_data[5]}\nВозраст: {liker_data[3]}\nВаша совместимость: {current_compatibility}\n",
+            f"✉️ <b>Вами заинтересовались!</b>\nИМЯ: {liker_data[1]}\nПОЛ: {liker_data[7]}\nГОРОД: {liker_data[2]}"
+            f"\nОПИСАНИЕ: {liker_data[4]}\nЦЕЛЬ ОБЩЕНИЯ: {liker_data[5]}\nВОЗРАСТ: {liker_data[3]}"
+            f"\nВАША СОВМЕСТИМОСТЬ: {current_compatibility}\n",
         )
 
         bot.send_photo(
@@ -666,6 +675,7 @@ def notify_likes(user_id):
             photo=liker_data[6],
             caption=caption,
             reply_markup=reply_markup,
+            parse_mode="HTML"
         )
 
 
@@ -683,11 +693,11 @@ def handle_accept(call):
     if user_data and liked_user_data:
         send_temporary_confirmation(
             user_id,
-            f"Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}",
+            f"👻 Вы понравились друг другу! {liked_user_data[1]} лайкнул вас в ответ. Начните общение: @{liked_user_data[9]}",
         )
         send_temporary_confirmation(
             liked_user_id,
-            f"Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
+            f"👻 Вы понравились друг другу! Вы лайкнули {user_data[1]} Начните общение: @{user_data[9]}",
         )
 
         database_manager.remove_mutual_likes_and_add_friends(user_id, liked_user_id)

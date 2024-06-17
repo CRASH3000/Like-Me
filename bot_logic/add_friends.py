@@ -56,8 +56,10 @@ def view_friend(call, bot, database_manager):
         bot.edit_message_media(
             media=types.InputMediaPhoto(
                 user_data[6],
-                caption=f"Анкета друга:\nИмя: {user_data[1]}\nПол: {user_data[7]}\nГород: {user_data[2]}"
-                f"\nОписание: {user_data[4]}\nЦель общения: {user_data[5]}\nВозраст: {user_data[3]}",
+                caption=f"<b>''АНКЕТА ДРУГА''</b>\n--------------------------------------------------------"
+                        f" \nИМЯ:  {user_data[1]}\nПОЛ:  {user_data[7]}\nГОРОД:  {user_data[2]}"
+                        f"\nОПИСАНИЕ:  {user_data[4]}\nЦЕЛЬ ОБЩЕНИЯ:  {user_data[5]}\nВОЗРАСТ:  {user_data[3]}",
+                parse_mode="HTML"
             ),
             chat_id=call.message.chat.id,
             message_id=call.message.message_id,
