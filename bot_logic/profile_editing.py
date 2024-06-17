@@ -41,7 +41,7 @@ def edit_name(call, bot, set_state, STATE_WAITING_FOR_PROFILE_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_PROFILE_UPDATE)
-    text_message = "Введите ваше новое имя"
+    text_message = "✍️ Напиши новое имя \n 👻Хочешь написать свое полное имя или может никнейм или свой псевдоним)"
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -61,7 +61,8 @@ def edit_descriptions(call, bot, set_state, STATE_WAITING_FOR_DESCRIPTIONS_UPDAT
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_DESCRIPTIONS_UPDATE)
-    text_message = "Введите ваше новое descriptions"
+    text_message = ("Напиши новое описание о себе "
+                    "\n👻 Возможно ты хочешь рассказать больше о себе или наоборот что-то сократить")
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -133,7 +134,8 @@ def edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_CITY_UPDATE)
-    text_message = "Введите ваше новое город"
+    text_message = ("Напиши название своего города  \n👻 <b>Помни что-то нужно указать правильное "
+                    "название своего города иначе тебя никто не найдет( </b>")
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -153,7 +155,7 @@ def edit_photo(call, bot, set_state, STATE_WAITING_FOR_PHOTO_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_PHOTO_UPDATE)
-    text_message = "Отправьте новое фото"
+    text_message = "Отправьте новое фото \n👻 Или картинку, в любом случае тебе решать как украсить свой профиль xD"
     bot.answer_callback_query(call.id)
     bot.send_message(call.message.chat.id, text_message)
 
