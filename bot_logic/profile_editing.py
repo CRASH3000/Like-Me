@@ -91,6 +91,7 @@ def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
     button_status_1 = ask_status_data["button_text_status_1"]
     button_status_2 = ask_status_data["button_text_status_2"]
     button_status_3 = ask_status_data["button_text_status_3"]
+    button_status_4 = ask_status_data["button_text_status_4"]
 
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
@@ -99,6 +100,7 @@ def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
         ),
         types.InlineKeyboardButton(button_status_2, callback_data="status_find_love_2"),
         types.InlineKeyboardButton(button_status_3, callback_data="status_just_chat_3"),
+        types.InlineKeyboardButton(button_status_4, callback_data="status_business_4"),
     ]
     for button in buttons:
         markup_status.add(button)
@@ -115,6 +117,7 @@ def update_status_text(callback_data):
         "status_find_friends_1": "Найти друзей",
         "status_find_love_2": "Найти вторую половинку",
         "status_just_chat_3": "Просто пообщаться",
+        "status_business_4": "Найти коллегу или наставника",
     }
     # Получаем ключ статуса (например, 'find_friends') и возвращаем соответствующий текст
     return statuses.get(callback_data, "Неизвестный статус")
