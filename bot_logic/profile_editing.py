@@ -41,7 +41,7 @@ def edit_name(call, bot, set_state, STATE_WAITING_FOR_PROFILE_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_PROFILE_UPDATE)
-    text_message = "Введите ваше новое имя"
+    text_message = "✍️ Напиши новое имя \n 👻Хочешь написать свое полное имя или может никнейм или свой псевдоним)"
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -61,7 +61,8 @@ def edit_descriptions(call, bot, set_state, STATE_WAITING_FOR_DESCRIPTIONS_UPDAT
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_DESCRIPTIONS_UPDATE)
-    text_message = "Введите ваше новое descriptions"
+    text_message = ("Напиши новое описание о себе "
+                    "\n👻 Возможно ты хочешь рассказать больше о себе или наоборот что-то сократить")
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -90,6 +91,7 @@ def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
     button_status_1 = ask_status_data["button_text_status_1"]
     button_status_2 = ask_status_data["button_text_status_2"]
     button_status_3 = ask_status_data["button_text_status_3"]
+    button_status_4 = ask_status_data["button_text_status_4"]
 
     markup_status = types.InlineKeyboardMarkup()
     buttons = [
@@ -98,6 +100,7 @@ def edit_status(call, bot, set_state, STATE_WAITING_FOR_STATUS_UPDATE):
         ),
         types.InlineKeyboardButton(button_status_2, callback_data="status_find_love_2"),
         types.InlineKeyboardButton(button_status_3, callback_data="status_just_chat_3"),
+        types.InlineKeyboardButton(button_status_4, callback_data="status_business_4"),
     ]
     for button in buttons:
         markup_status.add(button)
@@ -114,6 +117,7 @@ def update_status_text(callback_data):
         "status_find_friends_1": "Найти друзей",
         "status_find_love_2": "Найти вторую половинку",
         "status_just_chat_3": "Просто пообщаться",
+        "status_business_4": "Найти коллегу или наставника",
     }
     # Получаем ключ статуса (например, 'find_friends') и возвращаем соответствующий текст
     return statuses.get(callback_data, "Неизвестный статус")
@@ -133,7 +137,8 @@ def edit_city(call, bot, set_state, STATE_WAITING_FOR_CITY_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_CITY_UPDATE)
-    text_message = "Введите ваше новое город"
+    text_message = ("Напиши название своего города  \n👻 <b>Помни что-то нужно указать правильное "
+                    "название своего города иначе тебя никто не найдет( </b>")
     bot.send_message(call.message.chat.id, text_message)
 
 
@@ -153,7 +158,7 @@ def edit_photo(call, bot, set_state, STATE_WAITING_FOR_PHOTO_UPDATE):
     bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
     set_state(call.from_user.id, STATE_WAITING_FOR_PHOTO_UPDATE)
-    text_message = "Отправьте новое фото"
+    text_message = "Отправьте новое фото \n👻 Или картинку, в любом случае тебе решать как украсить свой профиль xD"
     bot.answer_callback_query(call.id)
     bot.send_message(call.message.chat.id, text_message)
 
